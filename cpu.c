@@ -11,10 +11,10 @@ CPU* cpu_init(int memory_size)
     cpu->memory_handler = memory_init(memory_size);
     cpu->context = hashmap_create();
 
-    int* ax = malloc(sizeof(int)); (*ax) = 0;
-    int* bx = malloc(sizeof(int)); (*bx) = 0;
-    int* cx = malloc(sizeof(int)); (*cx) = 0;
-    int* dx = malloc(sizeof(int)); (*dx) = 0;
+    int* ax = calloc(1, sizeof(int));
+    int* bx = calloc(1, sizeof(int));
+    int* cx = calloc(1, sizeof(int));
+    int* dx = calloc(1, sizeof(int));
     hashmap_insert(cpu->context, "AX", ax);
     hashmap_insert(cpu->context, "BX", bx);
     hashmap_insert(cpu->context, "CX", cx);

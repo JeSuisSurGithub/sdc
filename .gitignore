@@ -2,4 +2,4 @@
 /vgcore.*
 /*.o
 /*.pdf
-/test
+/test_hash_mem
