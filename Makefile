@@ -1,4 +1,4 @@
-TARGET=test
+TARGET=test_hash_mem
 FLAGS=-Wall -ggdb
 CC=gcc
 
@@ -7,7 +7,7 @@ all: $(TARGET)
 %.o: %.c
 	$(CC) $(FLAGS) -c $^
 
-test: test.o hash.o memory.o
+test_hash_mem: test_hash_mem.o hash.o memory.o
 	$(CC) $(FLAGS) -o $@ $^
 
 clean:
