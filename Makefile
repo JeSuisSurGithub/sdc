@@ -12,3 +12,4 @@ test_hash_mem: test_hash_mem.o hash.o memory.o
 
 clean:
 	rm -f *.o $(TARGET)
+	rm vgcore.*

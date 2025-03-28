@@ -1,7 +1,9 @@
 #include "cpu.h"
 #include "memory.h"
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 CPU* cpu_init(int memory_size)
 {
@@ -32,63 +34,55 @@ void cpu_destroy(CPU* cpu)
     free(cpu);
 }
 
-void* store(MemoryHandler *handler, const char *segment_name, int pos, void *data){
+void* store(MemoryHandler *handler, const char *segment_name, int pos, void *data)
+{
     Segment* seg = hashmap_get(handler->allocated, segment_name);
-    if (seg != NULL && pos <=seg->size){
+
+    if ((seg != NULL) && (pos <= seg->size)) {
         handler->memory[seg->start + pos] = data;
-    } else {
-        // ????
-        find_free_segment(MemoryHandler* handler, int start, int
-size, Segment** prev)
-    }
-    handler->total_size = handler->total_size + 1;
-
-    return handler->memory[seg->start + pos];
-}
-
-void* load(MemoryHandler *handler, const char *segment_name, int pos) {
-    Segment* seg = hashmap_get(handler->allocated, segment_name);
-    if (seg != NULL && pos <=seg->size) {
         return handler->memory[seg->start + pos];
     }
+
+    return NULL;
+}
+
+void* load(MemoryHandler *handler, const char *segment_name, int pos)
+{
+    Segment* seg = hashmap_get(handler->allocated, segment_name);
+
+    if ((seg != NULL) && (pos <= seg->size)) {
+        return handler->memory[seg->start + pos];
+    }
+
+    return NULL;
 }
 
 void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_count)
 {
-    int total_size = 0;
+    unsigned ds_size = 0;
     for (int i = 0; i < data_count; i++) {
-        int arr_size = 1;
-        char* var = data_instructions[i]->operand2;
-        while (*var++ != '\0') {
-            arr_size += (*var == ',');
-        }
-        total_size += arr_size;
-    }
-    total_size *= sizeof(int);
+        char* arr = data_instructions[i]->operand2;
 
-    int accu = 0;
-    if (create_segment(cpu->handler, "DS", 0, total_size) != -1)
-    {
-        for (int i = 0; i < data_count; i++) {
-            int arr_size = 1;
-            char* var = data_instructions[i]->operand2;
-            while (*var++ != '\0') {
-                arr_size += (*var == ',');
-            }
-            for (int j = 0; j < arr_size; j++) {
-                cpu->memory_handler->memory[total_size + j] = malloc(sizeof(int))
-            }
-            accu += arr_size;
+        unsigned ins_size = 0;
+        char* cur = strtok(arr, ",");
+
+        while (cur != NULL)
+        {
+            ins_size++;
+            cpu->memory_handler->memory[ds_size + ins_size] = malloc(sizeof(int));
+            *(int*)(cpu->memory_handler->memory[ds_size + ins_size]) = atoi(cur);
+            char* cur = strtok(NULL, ",");
         }
-    } else {
-        //
+
+        ds_size += ins_size;
     }
+    create_segment(cpu->memory_handler, "DS", 0, ds_size * sizeof(int));
 }
 
 void print_data_segment(CPU *cpu)
 {
-    Segment* DS = hashmap_get(cpu->memory_handler, "DS");
+    Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
     for (int i = DS->start; i < (DS->start + DS->size); i++) {
-        printf("%i\n", (*cpu->memory[i]))
+        printf("%i\n", *(int*)(cpu->memory_handler->memory[i]));
     }
 }

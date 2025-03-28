@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char* argv[])
 {
@@ -15,7 +16,7 @@ int main(int argc, char* argv[])
     hashmap_insert(map, c2, &i2);
     hashmap_insert(map, c3, &i3);
 
-    for (int i = 0; i < map->size; i++) {
+    for (int i = 0; i < TABLE_SIZE; i++) {
         if (map->table[i].key != NULL) {
             printf("Hashmap* %i %s %i %p\n", i, map->table[i].key, *(int*)(map->table[i].value), &map->table[i]);
         }
