@@ -1,4 +1,4 @@
-#include "cpu.h"
+ #include "cpu.h"
 #include "hash.h"
 #include "memory.h"
 
@@ -31,7 +31,15 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "BX"));
     free(hashmap_get(cpu->context, "CX"));
     free(hashmap_get(cpu->context, "DX"));
+    
+	for (int i = 0; i < cpu->memory_handler->free_list->size; i++) {
+    	if(cpu->memory_handler->memory[i] != NULL){
+    		free(cpu->memory_handler->memory[i]);
+    	}
+	}
+	free(cpu->memory_handler->memory);
 
+	
     hashmap_destroy(cpu->constant_pool);
     hashmap_destroy(cpu->context);
     memory_destroy(cpu->memory_handler);

@@ -8,6 +8,9 @@ MemoryHandler* memory_init(int size)
 {
     MemoryHandler* handler = (MemoryHandler*)malloc(sizeof(MemoryHandler));
     handler->memory = (void**)malloc(sizeof(void*) * size);
+    for(int i=0; i<size; i++){
+    	handler->memory[i] = NULL;
+    }
     handler->total_size = 0;
     handler->free_list = (Segment*)malloc(sizeof(Segment));
     handler->free_list->start = 0;
