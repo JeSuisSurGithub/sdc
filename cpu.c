@@ -31,15 +31,18 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "BX"));
     free(hashmap_get(cpu->context, "CX"));
     free(hashmap_get(cpu->context, "DX"));
-    
-	for (int i = 0; i < cpu->memory_handler->free_list->size; i++) {
-    	if(cpu->memory_handler->memory[i] != NULL){
+
+    Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
+	for (int i = 0; i < (DS->size / sizeof(int)); i++)
+    {
+        printf("%i %p\n", i, cpu->memory_handler->memory[i]);
+    	if (cpu->memory_handler->memory[i] != NULL){
     		free(cpu->memory_handler->memory[i]);
     	}
 	}
-	free(cpu->memory_handler->memory);
+    remove_segment(cpu->memory_handler, "DS");
 
-	
+
     hashmap_destroy(cpu->constant_pool);
     hashmap_destroy(cpu->context);
     memory_destroy(cpu->memory_handler);
@@ -80,10 +83,10 @@ void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_coun
 
         while (cur != NULL)
         {
-            ins_size++;
             cpu->memory_handler->memory[ds_size + ins_size] = malloc(sizeof(int));
             *(int*)(cpu->memory_handler->memory[ds_size + ins_size]) = atoi(cur);
             cur = strtok(NULL, ",");
+            ins_size++;
         }
 
         ds_size += ins_size;
@@ -93,10 +96,14 @@ void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_coun
 
 void print_data_segment(CPU *cpu)
 {
-    Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
-    for (int i = DS->start; i < (DS->start + DS->size); i++) {
-        printf("%i\n", *(int*)(cpu->memory_handler->memory[i]));
-    }
+    if (cpu != NULL) {
+		Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
+   		for (int i = DS->start; i < (DS->start + DS->size); i++) {
+    		if (cpu->memory_handler->memory[i] != NULL) {
+    			printf("%i\n", *(int*)(cpu->memory_handler->memory[i]));
+    		}
+    	}
+	}
 }
 
 int matches(const char* pattern, const char* string)

@@ -8,7 +8,7 @@ MemoryHandler* memory_init(int size)
 {
     MemoryHandler* handler = (MemoryHandler*)malloc(sizeof(MemoryHandler));
     handler->memory = (void**)malloc(sizeof(void*) * size);
-    for(int i=0; i<size; i++){
+    for (int i = 0; i < size; i++) {
     	handler->memory[i] = NULL;
     }
     handler->total_size = 0;
