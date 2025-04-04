@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <regex.h>
 
 CPU* cpu_init(int memory_size)
 {
@@ -88,4 +89,41 @@ void print_data_segment(CPU *cpu)
     for (int i = DS->start; i < (DS->start + DS->size); i++) {
         printf("%i\n", *(int*)(cpu->memory_handler->memory[i]));
     }
+}
+
+int matches(const char* pattern, const char* string)
+{
+    regex_t regex;
+    int result = regcomp(&regex, pattern, REG_EXTENDED) ;
+    if (result) {
+        fprintf(stderr, "Regex compilation failed for pattern: %s\n", pattern);
+        return 0;
+    }
+    result = regexec(&regex, string, 0, NULL, 0) ;
+    regfree (&regex) ;
+    return result == 0;
+}
+
+void* immediate_addressing(CPU *cpu, const char *operand)
+{
+    if (matches("^[0-9]+$", operand)) {
+        int n = atoi(operand);
+        int* val = hashmap_get(cpu->constant_pool, operand);
+        if (val == NULL) {
+            int* pn = malloc(sizeof(int)); (*pn) = n;
+            hashmap_insert(cpu->constant_pool, operand, pn);
+            return pn;
+        } else {
+            return val;
+        }
+    }
+    return NULL;
+}
+
+void* register_addressing(CPU *cpu, const char *operand)
+{
+    if (matches("^(A|B|C|D)X$", operand)) {
+        return hashmap_get(cpu->context, operand);
+    }
+    return NULL;
 }
