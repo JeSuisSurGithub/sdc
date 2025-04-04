@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "hash.h"
 #include "memory.h"
 
 #include <stdio.h>
@@ -10,6 +11,7 @@ CPU* cpu_init(int memory_size)
     CPU* cpu = (CPU*)malloc(sizeof(CPU));
     cpu->memory_handler = memory_init(memory_size);
     cpu->context = hashmap_create();
+    cpu->constant_pool = hashmap_create();
 
     int* ax = calloc(1, sizeof(int));
     int* bx = calloc(1, sizeof(int));
@@ -29,6 +31,7 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "CX"));
     free(hashmap_get(cpu->context, "DX"));
 
+    hashmap_destroy(cpu->constant_pool);
     hashmap_destroy(cpu->context);
     memory_destroy(cpu->memory_handler);
     free(cpu);
@@ -71,7 +74,7 @@ void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_coun
             ins_size++;
             cpu->memory_handler->memory[ds_size + ins_size] = malloc(sizeof(int));
             *(int*)(cpu->memory_handler->memory[ds_size + ins_size]) = atoi(cur);
-            char* cur = strtok(NULL, ",");
+            cur = strtok(NULL, ",");
         }
 
         ds_size += ins_size;

@@ -1,4 +1,8 @@
-#include "hash.h"
+#include "parser.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define MAX_LINE_LENGTH 256
 #define BETA 39
@@ -29,7 +33,7 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
     }
 
     // Enregistrer l’adresse dans la table de hachage
-    hashmap_insert(memory_locations, inst->mnemonic, (void*)(intptr_t)adresse_suiv);
+    hashmap_insert(memory_locations, inst->mnemonic, &adresse_suiv);
     adresse_suiv += s;
 
     return inst;
@@ -51,7 +55,7 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
     if (line[i] == ':') {
         label[i] = '\0'; // Fin de chaîne
         i++; // Sauter le ":"
-        	
+
         hashmap_insert(labels, label, (void*)&code_count); // Ajoutez le label à la table
         printf("%i\n", *(int*)hashmap_get(labels, label));
     } else {

@@ -8,6 +8,7 @@
 typedef struct CPU{
     MemoryHandler* memory_handler;
     HashMap* context;
+    HashMap* constant_pool;
 }CPU;
 
 CPU* cpu_init(int memory_size);
