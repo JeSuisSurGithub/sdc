@@ -6,12 +6,9 @@
 
 int main(int argc, char* argv[])
 {
-    int* i1 = malloc(sizeof(int)); (*i1) = 1;
-    const char* c1 = "un";
-    int* i2 = malloc(sizeof(int)); (*i2) = 2;
-    const char* c2 = "deux";
-    int* i3 = malloc(sizeof(int)); (*i3) = 3;
-    const char* c3 = "trois";
+    int i1 = 1; const char c1[] = "un";
+    int i2 = 2; const char c2[] = "deux";
+    int i3 = 3; const char c3[] = "trois";
 
     HashMap* map = hashmap_create();
     hashmap_insert(map, c1, &i1);
@@ -34,10 +31,6 @@ int main(int argc, char* argv[])
     printf("Hashmap@'un' %s %p\n", c1, hashmap_get(map, c1));
     printf("Hashmap@'deux' %s %p\n", c2, hashmap_get(map, c2));
     printf("Hashmap@'trois' %s %p\n", c3, hashmap_get(map, c3));
-
-    free(i1);
-    free(i2);
-    free(i3);
 
     hashmap_destroy(map);
 
