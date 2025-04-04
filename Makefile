@@ -13,7 +13,7 @@ test_hash: test_hash.o hash.o
 test_mem: test_mem.o hash.o memory.o
 	$(CC) $(FLAGS) -o $@ $^
 
-test_cpu: test_cpu.o hash.o memory.o cpu.o
+test_cpu: test_cpu.o hash.o memory.o cpu.o parser.o
 	$(CC) $(FLAGS) -o $@ $^
 
 test_parser: test_parser.o hash.o parser.o

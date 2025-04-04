@@ -1,7 +1,8 @@
 /.vscode
-/vgcore.*
 /*.o
 /*.pdf
+/test_cpu
 /test_hash
 /test_mem
-/test_cpu
+/test_parser
+/vgcore.*

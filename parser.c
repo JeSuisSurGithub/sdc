@@ -1,11 +1,11 @@
 #include "parser.h"
+#include "hash.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_LINE_LENGTH 256
-#define BETA 39
 
 Instruction *parse_data_instruction(const char *line, HashMap *memory_locations) {
     Instruction *inst = (Instruction*)malloc(sizeof(Instruction));
@@ -20,7 +20,7 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
         return NULL;
     }
 
-    // Stocker dans l'instruction
+    // Stocker dans l'instruction FAIRE FREE
     inst->mnemonic = strdup(nom);
     inst->operand1 = strdup(type);
     inst->operand2 = strdup(valeur);
@@ -33,7 +33,9 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
     }
 
     // Enregistrer l’adresse dans la table de hachage
-    hashmap_insert(memory_locations, inst->mnemonic, &adresse_suiv);
+    int* adresse_suiv_mem = malloc(sizeof(int));
+    (*adresse_suiv_mem) = adresse_suiv;
+    hashmap_insert(memory_locations, inst->mnemonic, adresse_suiv_mem);
     adresse_suiv += s;
 
     return inst;
@@ -56,8 +58,9 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
         label[i] = '\0'; // Fin de chaîne
         i++; // Sauter le ":"
 
-        hashmap_insert(labels, label, (void*)&code_count); // Ajoutez le label à la table
-        printf("%i\n", *(int*)hashmap_get(labels, label));
+        int* code_count_mem = malloc(sizeof(int));
+        (*code_count_mem) = code_count;
+        hashmap_insert(labels, label, code_count_mem);
     } else {
         // Pas de label, réinitialisez l'index à 0
         i = 0;
@@ -169,33 +172,46 @@ ParserResult* parse(const char* filename) {
 
 
 
-void free_parser_result(ParserResult* result) {
-    if (result) {
-        // Libérer les instructions de la section .DATA
-        for (int i = 0; i < result->data_count; i++) {
+void free_parser_result(ParserResult* result)
+{
+    if (result)
+    {
+        for (int i = 0; i < result->data_count; i++)
+        {
             free(result->data_instructions[i]->mnemonic);
             free(result->data_instructions[i]->operand1);
             free(result->data_instructions[i]->operand2);
-            free(result->data_instructions[i]); // Libérer l'instruction elle-même
+            free(result->data_instructions[i]);
         }
-        free(result->data_instructions); // Libérer le tableau des instructions .DATA
+        free(result->data_instructions);
 
-        // Libérer les instructions de la section .CODE
-        for (int i = 0; i < result->code_count; i++) {
+        for (int i = 0; i < result->code_count; i++)
+        {
             free(result->code_instructions[i]->mnemonic);
             free(result->code_instructions[i]->operand1);
             free(result->code_instructions[i]->operand2);
-            free(result->code_instructions[i]); // Libérer l'instruction elle-même
+            free(result->code_instructions[i]);
         }
-        free(result->code_instructions); // Libérer le tableau des instructions .CODE
+        free(result->code_instructions);
 
-        // Libérer la table de hachage des labels
-        hashmap_destroy(result->labels); // Supposons que cette fonction existe
+        for (int i = 0; i < TABLE_SIZE; i++)
+        {
+            if (result->labels->table[i].key != NULL) {
+                free(result->labels->table[i].value);
+            }
+        }
 
-        // Libérer la table de hachage des emplacements mémoire
-        hashmap_destroy(result->memory_locations); // Supposons que cette fonction existe
+        hashmap_destroy(result->labels);
 
-        // Libérer la structure ParserResult elle-même
+        for (int i = 0; i < TABLE_SIZE; i++)
+        {
+            if (result->memory_locations->table[i].key != NULL) {
+                free(result->memory_locations->table[i].value);
+            }
+        }
+
+        hashmap_destroy(result->memory_locations);
+
         free(result);
     }
 }
