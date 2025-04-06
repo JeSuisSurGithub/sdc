@@ -1,4 +1,4 @@
-TARGET=test_hash test_mem test_cpu test_parser
+TARGET=test_hash test_mem test_cpu test_cpu2 test_parser
 FLAGS=-Wall -ggdb
 CC=gcc
 
@@ -14,6 +14,9 @@ test_mem: test_mem.o hash.o memory.o
 	$(CC) $(FLAGS) -o $@ $^
 
 test_cpu: test_cpu.o hash.o memory.o cpu.o parser.o
+	$(CC) $(FLAGS) -o $@ $^
+
+test_cpu2: test_cpu2.o hash.o memory.o cpu.o parser.o
 	$(CC) $(FLAGS) -o $@ $^
 
 test_parser: test_parser.o hash.o parser.o

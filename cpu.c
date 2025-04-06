@@ -41,6 +41,11 @@ void cpu_destroy(CPU* cpu)
 	}
     remove_segment(cpu->memory_handler, "DS");
 
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (cpu->constant_pool->table[i].key != NULL) {
+            free(cpu->constant_pool->table[i].value);
+        }
+    }
     hashmap_destroy(cpu->constant_pool);
     hashmap_destroy(cpu->context);
     memory_destroy(cpu->memory_handler);
@@ -102,7 +107,7 @@ void print_data_segment(CPU *cpu)
 		Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
    		for (int i = DS->start; i < (DS->start + DS->size); i++) {
     		if (cpu->memory_handler->memory[i] != NULL) {
-    			printf("%i\n", *(int*)(cpu->memory_handler->memory[i]));
+    			printf("DS[%i] = %i\n", i, *(int*)(cpu->memory_handler->memory[i]));
     		}
     	}
 	}
@@ -142,5 +147,81 @@ void* register_addressing(CPU *cpu, const char *operand)
     if (matches("^(A|B|C|D)X$", operand)) {
         return hashmap_get(cpu->context, operand);
     }
+    return NULL;
+}
+
+void* memory_direct_addressing(CPU *cpu, const char *operand)
+{
+    if (matches("^\\[[0-9]+\\]$", operand)) {
+        int addr = 0;
+        sscanf(operand, "[%i]", &addr);
+        return cpu->memory_handler->memory[addr];
+    }
+    return NULL;
+}
+
+void* register_indirect_addressing(CPU *cpu, const char* operand)
+{
+    if (matches("^\\[(A|B|C|D)X\\]$", operand)) {
+        char addr[3] = {0};
+        sscanf(operand, "[%02s]", addr);
+        return cpu->memory_handler->memory[*(int*)hashmap_get(cpu->context, addr)];
+    }
+    return NULL;
+}
+
+void handle_MOV(CPU* cpu, void* src, void* dest)
+{
+    int* isrc = (int*)src;
+    int* idest = (int*)dest;
+    *(idest) = *(isrc);
+}
+
+CPU* setup_test_environment()
+{
+    CPU* cpu = cpu_init(1024);
+    if (!cpu) {
+        printf("Error: CPU initialition failed\n");
+        return NULL;
+    }
+
+    int* ax = (int*)hashmap_get(cpu->context, "AX");
+    int* bx = (int*)hashmap_get(cpu->context, "BX");
+    int* cx = (int*)hashmap_get(cpu->context, "CX");
+    int* dx = (int*)hashmap_get(cpu->context, "DX");
+
+    *ax = 3;
+    *bx = 6;
+    *cx = 100;
+    *dx = 5;
+
+    if (!hashmap_get(cpu->memory_handler->allocated, "DS")) {
+        create_segment(cpu->memory_handler, "DS", 0, 10 * sizeof(int));
+
+        for (int i = 0; i < 10; i++) {
+            int* value = (int*)malloc(sizeof(int));
+            *value = i * 10 + 5;
+            store(cpu->memory_handler, "DS", i, value);
+        }
+    }
+
+    printf("Test environnment initialized\n");
+    return cpu;
+}
+
+void* resolve_addressing(CPU *cpu, const char *operand)
+{
+    void* imm = immediate_addressing(cpu, operand);
+    if (imm != NULL) return imm;
+
+    void* reg = register_addressing(cpu, operand);
+    if (reg != NULL) return reg;
+
+    void* direct = memory_direct_addressing(cpu, operand);
+    if (direct != NULL) return direct;
+
+    void* indirect = register_indirect_addressing(cpu, operand);
+    if (indirect != NULL) return indirect;
+
     return NULL;
 }

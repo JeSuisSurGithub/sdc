@@ -2,6 +2,7 @@
 /*.o
 /*.pdf
 /test_cpu
+/test_cpu2
 /test_hash
 /test_mem
 /test_parser
