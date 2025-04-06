@@ -17,5 +17,8 @@ void* store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
 void* load(MemoryHandler *handler, const char *segment_name, int pos);
 void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_count);
 void print_data_segment(CPU *cpu);
+int matches(const char* pattern, const char* string);
+void* immediate_addressing(CPU *cpu, const char *operand);
+void* register_addressing(CPU *cpu, const char *operand);
 
 #endif /* CPU_H */

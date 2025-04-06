@@ -22,29 +22,33 @@ int main() {
     printf("Segment DS alloué avec succès !\n");
 
 
-    // int x = 3, y = 4, z = 5;
-    // store(cpu->memory_handler, "DS", 0, &x);
-    // store(cpu->memory_handler, "DS", 1, &y);
-    // store(cpu->memory_handler, "DS", 2, &z);
-// 
-    // int arr[4] = {10, 20, 30, 40};
-    // for (int i = 0; i < 4; i++) {
-        // store(cpu->memory_handler, "DS", 3 + i, &arr[i]);
-    // }
-    // printf("Données stockées avec succès dans DS.\n");
+    int* x = (int*)load(cpu->memory_handler, "DS", 0);
+    int* y = (int*)load(cpu->memory_handler, "DS", 1);
+    printf("Valeurs chargées : x = %d, y = %d\n", *x, *y);
 
-    // print_data_segment(cpu);
+    for (int i = 0; i < 4; i++) {
+        int* arri = (int*)load(cpu->memory_handler, "DS", 2 + i);
+        printf("arr[%d] = %d\n", i, *arri);
+    }
 
-    // int *loaded_x = (int*) load(cpu->memory_handler, "DS", 0);
-    // int *loaded_y = (int*) load(cpu->memory_handler, "DS", 1);
-    // int *loaded_z = (int*) load(cpu->memory_handler, "DS", 2);
-    // printf("Valeurs chargées : x = %d, y = %d, z = %d\n", *loaded_x, *loaded_y, *loaded_z);
+    int* new_x = malloc(sizeof(int)); (*new_x) = -127;
+    int* new_y = malloc(sizeof(int)); (*new_y) = 128;
+    store(cpu->memory_handler, "DS", 0, new_x);
+    store(cpu->memory_handler, "DS", 1, new_y);
 
-    // for (int i = 0; i < 4; i++) {
-    //     int *loaded_arr = (int*) load(cpu->memory_handler, "DS", 3 + i);
-    //     printf("arr[%d] = %d\n", i, *loaded_arr);
-    // }
+    int* new_arr0 = malloc(sizeof(int)); (*new_arr0) = -32767;
+    int* new_arr1 = malloc(sizeof(int)); (*new_arr1) = 32768;
+    int* new_arr2 = malloc(sizeof(int)); (*new_arr2) = -2147483647;
+    int* new_arr3 = malloc(sizeof(int)); (*new_arr3) = 2147483647;
 
+    store(cpu->memory_handler, "DS", 2, new_arr0);
+    store(cpu->memory_handler, "DS", 3, new_arr1);
+    store(cpu->memory_handler, "DS", 4, new_arr2);
+    store(cpu->memory_handler, "DS", 5, new_arr3);
+
+    printf("Données stockées avec succès dans DS.\n");
+
+    print_data_segment(cpu);
 
     cpu_destroy(cpu);
     free_parser_result(parser);

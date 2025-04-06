@@ -14,41 +14,40 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
     char nom[100], type[10], valeur[256];
 
     // Format : nom type valeurs
-    int n = sscanf(line, "%s %s %[^\n]", nom, type, valeur); // %[^\n]: Lis tous les caractères jusqu’à rencontrer un saut de ligne (\n)
+    int n = sscanf(line, "%s %s %[^\n]", nom, type, valeur);
     if (n != 3) {
         free(inst);
         return NULL;
     }
 
-    // Stocker dans l'instruction FAIRE FREE
     inst->mnemonic = strdup(nom);
     inst->operand1 = strdup(type);
     inst->operand2 = strdup(valeur);
 
-    // Calculer combien de valeurs il y a dans operand2 (compter les virgules)
     static int adresse_suiv = 0;
-    int s = 1;
+    int nb_elem = 1;
     for (int i = 0; valeur[i]; i++) {
-        if (valeur[i] == ',') s++;
+        if (valeur[i] == ',') nb_elem++;
     }
 
-    // Enregistrer l’adresse dans la table de hachage
     int* adresse_suiv_mem = malloc(sizeof(int));
     (*adresse_suiv_mem) = adresse_suiv;
     hashmap_insert(memory_locations, inst->mnemonic, adresse_suiv_mem);
-    adresse_suiv += s;
+    adresse_suiv += nb_elem;
 
     return inst;
 }
 
 Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_count) {
     Instruction* inst = (Instruction*)malloc(sizeof(Instruction));
-    if (!inst) return NULL;
+    if (!inst) {
+        return NULL;
+    }
 
     char label[100] = "", mnemonic[20] = "", op1[100] = "", op2[100] = "";
     int i = 0;
 
-    // Étape 1 : détecter s'il y a un label
+    // Détecter s'il y a un label
     while (line[i] != '\0' && line[i] != ':' && i < 99) {
         label[i] = line[i];
         i++;
@@ -69,16 +68,15 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
     // Ignorer les espaces après le label
     while (line[i] == ' ') i++;
 
-    // Étape 2 : lire le reste de la ligne (instruction)
+    // Lire le reste de la ligne (instruction)
     int n = sscanf(line + i, "%s %[^,],%[^\n]", mnemonic, op1, op2);
 
-    // Vérifiez si on a trouvé une instruction valide
-    if (n < 1) { // Si aucune instruction n'a été trouvée
+    // Si on a trouvé une instruction valide
+    if (n < 1) {
         free(inst);
         return NULL; // Ligne ignorée
     }
 
-    // Vérifier si l'instruction a un format valide
     inst->mnemonic = strdup(mnemonic);
 
     // Si l'instruction n'a pas d'opérandes, on remplit les opérandes avec des chaînes vides
@@ -90,12 +88,14 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
 
 
 
-ParserResult* parse(const char* filename) {
+ParserResult* parse(const char* filename)
+{
     FILE* file = fopen(filename, "r");
     if (!file) {
         perror("Erreur lors de l'ouverture du fichier");
         return NULL;
     }
+
     ParserResult* result = malloc(sizeof(ParserResult));
     result->data_instructions = malloc(sizeof(Instruction*) * 10);
     result->code_instructions = malloc(sizeof(Instruction*) * 10);
@@ -169,8 +169,6 @@ ParserResult* parse(const char* filename) {
     fclose(file);
     return result;
 }
-
-
 
 void free_parser_result(ParserResult* result)
 {

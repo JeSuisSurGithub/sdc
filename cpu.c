@@ -35,13 +35,11 @@ void cpu_destroy(CPU* cpu)
     Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
 	for (int i = 0; i < (DS->size / sizeof(int)); i++)
     {
-        printf("%i %p\n", i, cpu->memory_handler->memory[i]);
-    	if (cpu->memory_handler->memory[i] != NULL){
+    	if (cpu->memory_handler->memory[i] != NULL) {
     		free(cpu->memory_handler->memory[i]);
     	}
 	}
     remove_segment(cpu->memory_handler, "DS");
-
 
     hashmap_destroy(cpu->constant_pool);
     hashmap_destroy(cpu->context);
@@ -54,6 +52,10 @@ void* store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
     Segment* seg = hashmap_get(handler->allocated, segment_name);
 
     if ((seg != NULL) && (pos <= seg->size)) {
+        if (handler->memory[seg->start + pos] != NULL) {
+            free(handler->memory[seg->start + pos]);
+            handler->memory[seg->start + pos] = NULL;
+        }
         handler->memory[seg->start + pos] = data;
         return handler->memory[seg->start + pos];
     }
