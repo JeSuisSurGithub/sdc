@@ -15,20 +15,20 @@ CPU* cpu_init(int memory_size)
     }
 
     cpu->memory_handler = memory_init(memory_size);
-    if (!cpu->memory_handler) {
+    if (cpu->memory_handler == NULL) {
         free(cpu);
         return NULL;
     }
 
     cpu->context = hashmap_create();
-    if (!cpu->context) {
+    if (cpu->context == NULL) {
         memory_destroy(cpu->memory_handler);
         free(cpu);
         return NULL;
     }
 
     cpu->constant_pool = hashmap_create();
-    if (!cpu->context) {
+    if (cpu->context == NULL) {
         hashmap_destroy(cpu->context);
         memory_destroy(cpu->memory_handler);
         free(cpu);
@@ -56,7 +56,9 @@ CPU* cpu_init(int memory_size)
     hashmap_insert(cpu->context, "SP", sp);
     hashmap_insert(cpu->context, "BP", bp);
 
-    create_segment(cpu->memory_handler, "SS", 0, 128);
+    if (create_segment(cpu->memory_handler, "SS", memory_size - STACK_SIZE, STACK_SIZE) < 0) {
+        puts("cpu_init(): create_segment failed");
+    }
     *bp = 127;
     *sp = 127;
 
@@ -70,6 +72,13 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "CX"));
     free(hashmap_get(cpu->context, "DX"));
 
+    free(hashmap_get(cpu->context, "IP"));
+    free(hashmap_get(cpu->context, "ZF"));
+    free(hashmap_get(cpu->context, "SF"));
+
+    free(hashmap_get(cpu->context, "BP"));
+    free(hashmap_get(cpu->context, "SP"));
+
     Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
 	for (int i = 0; i < (DS->size / sizeof(int)); i++)
     {
@@ -77,6 +86,8 @@ void cpu_destroy(CPU* cpu)
     		free(cpu->memory_handler->memory[i]);
     	}
 	}
+    remove_segment(cpu->memory_handler, "SS");
+    remove_segment(cpu->memory_handler, "CS");
     remove_segment(cpu->memory_handler, "DS");
 
     for (int i = 0; i < TABLE_SIZE; i++) {
@@ -136,7 +147,9 @@ void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_coun
 
         ds_size += ins_size;
     }
-    create_segment(cpu->memory_handler, "DS", 0, ds_size * sizeof(int));
+    if (create_segment(cpu->memory_handler, "DS", 0, ds_size * sizeof(int)) < 0) {
+        puts("allocate_variables(): create_segment failed");
+    }
 }
 
 void print_data_segment(CPU *cpu)
@@ -234,7 +247,9 @@ CPU* setup_test_environment()
     *dx = 5;
 
     if (!hashmap_get(cpu->memory_handler->allocated, "DS")) {
-        create_segment(cpu->memory_handler, "DS", 0, 10 * sizeof(int));
+        if (create_segment(cpu->memory_handler, "DS", 0, 10 * sizeof(int)) < 0) {
+            puts("setup_test_environment(): create_segment failed");
+        }
 
         for (int i = 0; i < 10; i++) {
             int* value = (int*)malloc(sizeof(int));
@@ -268,7 +283,11 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
 {
     if (!cpu || !code_instructions || code_count <= 0) return;
 
-    create_segment(cpu->memory_handler, "CS", 0, code_count);
+    Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
+
+    if (create_segment(cpu->memory_handler, "CS", (DS->start + DS->size), code_count) < 0) {
+        puts("allocate_code_segment(): create_segment failed");
+    }
 
     for (int i = 0; i < code_count; i++) {
         store(cpu->memory_handler, "CS", i, code_instructions[i]);
@@ -303,8 +322,8 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
         *sf = (result < 0) ? 1 : 0;
     }
     else if (strcmp(instr->mnemonic, "JMP") == 0) {
-        if (!src) return 0;
-        *ip = *(int *)src;
+        if (!dest) return 0;
+        *ip = *(int *)dest;
     }
     else if (strcmp(instr->mnemonic, "JZ") == 0) {
         if (!src || !zf) return 0;
@@ -349,10 +368,10 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
 int execute_instruction(CPU *cpu, Instruction *instr) {
     if (!cpu || !instr) return 0;
 
-    void *src = NULL;
-    void *dest = NULL;
+    void* src = NULL;
+    void* dest = NULL;
 
-    if (instr->operand1) {
+    if (instr->operand1 != NULL && strcmp(instr->operand1, "") != 0) {
         dest = resolve_addressing(cpu, instr->operand1);
         if (!dest && strcmp(instr->mnemonic, "JMP") != 0 &&
             strcmp(instr->mnemonic, "JZ") != 0 && strcmp(instr->mnemonic, "JNZ") != 0) {
@@ -360,7 +379,7 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
         }
     }
 
-    if (instr->operand2) {
+    if (instr->operand2 != NULL && strcmp(instr->operand2, "") != 0) {
         src = resolve_addressing(cpu, instr->operand2);
         if (!src && strcmp(instr->mnemonic, "CMP") != 0) {
             return 0;

@@ -1,5 +1,6 @@
 #include "hash.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,8 +17,19 @@ unsigned long simple_hash(const char *str)
 HashMap* hashmap_create()
 {
     HashMap* map = (HashMap*)malloc(sizeof(HashMap));
+    if (map == NULL) {
+        perror("hashmap_create(): malloc failed");
+        return NULL;
+    }
+
     map->size = 0;
     map->table = (HashEntry*)malloc(sizeof(HashEntry) * TABLE_SIZE);
+    if (map == NULL) {
+        perror("hashmap_create(): malloc failed");
+        free(map);
+        return NULL;
+    }
+
     for (int i = 0; i < TABLE_SIZE; i++) {
         map->table[i].key = NULL;
         map->table[i].value = NULL;
@@ -28,6 +40,7 @@ HashMap* hashmap_create()
 int hashmap_insert(HashMap *map, const char *key, void *value)
 {
     if ((map == NULL) || (key == NULL) || (map->size >= TABLE_SIZE)) {
+        perror("hashmap_insert: invalid arguments");
         return -1;
     }
 
@@ -45,12 +58,14 @@ int hashmap_insert(HashMap *map, const char *key, void *value)
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);
 
-    return -1;
+    perror("hashmap_insert: hashmap is full");
+    return -2;
 }
 
 void* hashmap_get(HashMap *map, const char *key)
 {
     if ((map == NULL) || (key == NULL)) {
+        perror("hashmap_get: invalid arguments");
         return NULL;
     }
 
@@ -76,6 +91,7 @@ void* hashmap_get(HashMap *map, const char *key)
 int hashmap_remove(HashMap *map, const char *key)
 {
     if (map == NULL || key == NULL) {
+        perror("hashmap_remove: invalid arguments");
         return -1;
     }
 
@@ -85,7 +101,7 @@ int hashmap_remove(HashMap *map, const char *key)
 
     do {
         if (map->table[hash].key == NULL) {
-            return -1;
+            return -2;
         } else if (map->table[hash_depart].key == TOMBSTONE) {
             continue;
         } else if (strcmp(map->table[hash].key, key) == 0) {
@@ -99,12 +115,14 @@ int hashmap_remove(HashMap *map, const char *key)
         }
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);
-    return -1;
+
+    return -3;
 }
 
 void hashmap_destroy(HashMap *map)
 {
     if (map == NULL) {
+        perror("hashmap_destroy: invalid arguments");
         return;
     }
 

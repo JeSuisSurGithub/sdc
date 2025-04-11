@@ -5,6 +5,8 @@
 #include "memory.h"
 #include "parser.h"
 
+#define STACK_SIZE 128
+
 typedef struct CPU{
     MemoryHandler* memory_handler;
     HashMap* context;

@@ -1,5 +1,5 @@
 TARGET=test_hash test_mem test_cpu test_cpu2 test_cpu3 test_parser
-FLAGS=-Wall -ggdb
+FLAGS=-Wall -Wextra -Wpedantic -ggdb
 CC=gcc
 
 all: $(TARGET)

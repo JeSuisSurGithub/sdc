@@ -7,16 +7,44 @@
 MemoryHandler* memory_init(int size)
 {
     MemoryHandler* handler = (MemoryHandler*)malloc(sizeof(MemoryHandler));
+    if (handler == NULL) {
+        puts("memory_init(): malloc failed");
+        return NULL;
+    }
+
     handler->memory = (void**)malloc(sizeof(void*) * size);
+    if (handler->memory == NULL) {
+        puts("memory_init(): malloc failed");
+        free(handler);
+        return NULL;
+    }
+
     for (int i = 0; i < size; i++) {
     	handler->memory[i] = NULL;
     }
     handler->total_size = 0;
+
     handler->free_list = (Segment*)malloc(sizeof(Segment));
+    if (handler->free_list == NULL) {
+        puts("memory_init(): malloc failed");
+        free(handler->memory);
+        free(handler);
+        return NULL;
+    }
+
     handler->free_list->start = 0;
     handler->free_list->size = size;
     handler->free_list->next = NULL;
+
     handler->allocated = hashmap_create();
+    if (handler->allocated == NULL) {
+        puts("memory_init(): hashmap_create failed");
+        free(handler->free_list);
+        free(handler->memory);
+        free(handler);
+        return NULL;
+    }
+
     return handler;
 }
 
@@ -66,6 +94,10 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
     {
         // Nouveau segment
         Segment* new_seg = (Segment*)malloc(sizeof(Segment));
+        if (new_seg == NULL) {
+            puts("create_segment(): malloc failed");
+            return -2;
+        }
         new_seg->start = start;
         new_seg->size = size;
         new_seg->next = NULL;
@@ -81,6 +113,12 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
         if (((cible->start + cible->size) - (new_seg->start + new_seg->size)) > 0)
         {
             Segment* apres = (Segment*)malloc(sizeof(Segment));
+            if (apres == NULL) {
+                puts("create_segment(): malloc failed");
+                free(new_seg);
+                return -3;
+            }
+
             apres->start = new_seg->start + new_seg->size;
             apres->size = (cible->start + cible->size) - (new_seg->start + new_seg->size);
             apres->next = handler->free_list;
@@ -90,6 +128,13 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
         if ((new_seg->start - cible->start) > 0)
         {
             Segment* avant = (Segment*)malloc(sizeof(Segment));
+            if (avant == NULL) {
+                puts("create_segment(): malloc failed");
+                free(new_seg);
+                // Encore un free
+                return -4;
+            }
+
             avant->start = cible->start;
             avant->size = new_seg->start - cible->start;
             avant->next = handler->free_list;
@@ -100,7 +145,12 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
 
         // Attributs
         handler->total_size += size;
-        hashmap_insert(handler->allocated, name, new_seg);
+        if (hashmap_insert(handler->allocated, name, new_seg) < 0) {
+            puts("create_segment(): hashmap_insert failed");
+            free(new_seg);
+            // Encore deux free
+            return -5;
+        }
 
         return 0;
     }
@@ -116,10 +166,14 @@ int remove_segment(MemoryHandler *handler, const char *name)
     Segment* cible = hashmap_get(handler->allocated, name);
 
     if (!cible) {
-        return -1;
+        puts("remove_segment: hashmap_get failed");
+        return -2;
     }
 
-    hashmap_remove(handler->allocated, name);
+    if (hashmap_remove(handler->allocated, name) < 0) {
+        puts("remove_segment: hashmap_remove failed");
+        return -3;
+    }
 
     handler->total_size -= cible->size;
 
@@ -140,6 +194,10 @@ int remove_segment(MemoryHandler *handler, const char *name)
     }
 
     Segment* new_seg = (Segment*)malloc(sizeof(Segment));
+    if (new_seg == NULL) {
+        puts("remove_segment: malloc failed");
+        return -4;
+    }
     new_seg->start = cible->start;
     new_seg->size = cible->size;
 

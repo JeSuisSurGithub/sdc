@@ -3,6 +3,10 @@
 
 #include "hash.h"
 
+
+#define MAX_CODE_COUNT 10 
+#define MAX_DATA_COUNT 10 
+
 typedef struct {
 	char* mnemonic;
 	char* operand1;

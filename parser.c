@@ -7,7 +7,7 @@
 
 #define MAX_LINE_LENGTH 256
 
-Instruction *parse_data_instruction(const char *line, HashMap *memory_locations) {
+Instruction* parse_data_instruction(const char *line, HashMap *memory_locations) {
     Instruction *inst = (Instruction*)malloc(sizeof(Instruction));
     if (!inst) return NULL;
 
@@ -16,6 +16,7 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
     // Format : nom type valeurs
     int n = sscanf(line, "%s %s %[^\n]", nom, type, valeur);
     if (n != 3) {
+        puts("parse_data_instruction: invalid format");
         free(inst);
         return NULL;
     }
@@ -31,8 +32,19 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
     }
 
     int* adresse_suiv_mem = malloc(sizeof(int));
+    if (adresse_suiv_mem == NULL) {
+        puts("parse_data_instruction: malloc failed");
+        free(inst);
+        return NULL;
+    }
     (*adresse_suiv_mem) = adresse_suiv;
-    hashmap_insert(memory_locations, inst->mnemonic, adresse_suiv_mem);
+
+    ;
+    if (hashmap_insert(memory_locations, inst->mnemonic, adresse_suiv_mem) < 0) {
+        puts("parse_data_instruction: hashmap_insert failed");
+        free(inst);
+        return NULL;
+    }
     adresse_suiv += nb_elem;
 
     return inst;
@@ -41,6 +53,7 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
 Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_count) {
     Instruction* inst = (Instruction*)malloc(sizeof(Instruction));
     if (!inst) {
+        puts("parse_code_instruction: malloc failed");
         return NULL;
     }
 
@@ -54,25 +67,36 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
     }
 
     if (line[i] == ':') {
-        label[i] = '\0'; // Fin de chaîne
+        label[i] = '\0';
         i++; // Sauter le ":"
 
         int* code_count_mem = malloc(sizeof(int));
+        if (code_count_mem == NULL) {
+            puts("parse_code_instruction: malloc failed");
+            free(inst);
+            return NULL;
+        }
+
         (*code_count_mem) = code_count;
-        hashmap_insert(labels, label, code_count_mem);
+
+        if (hashmap_insert(labels, label, code_count_mem) < 0) {
+            puts("parse_code_instruction: hashmap_insert failed");
+            free(inst);
+            free(code_count_mem);
+            return NULL;
+        }
     } else {
         // Pas de label, réinitialisez l'index à 0
         i = 0;
     }
 
-    // Ignorer les espaces après le label
     while (line[i] == ' ') i++;
 
     // Lire le reste de la ligne (instruction)
     int n = sscanf(line + i, "%s %[^,],%[^\n]", mnemonic, op1, op2);
 
-    // Si on a trouvé une instruction valide
     if (n < 1) {
+        puts("parse_code_instruction: invalid format");
         free(inst);
         return NULL; // Ligne ignorée
     }
@@ -86,24 +110,23 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
     return inst;
 }
 
-
-
 ParserResult* parse(const char* filename)
 {
     FILE* file = fopen(filename, "r");
     if (!file) {
-        perror("Erreur lors de l'ouverture du fichier");
+        puts("Erreur lors de l'ouverture du fichier");
         return NULL;
     }
 
+    // Verifications à faire
     ParserResult* result = malloc(sizeof(ParserResult));
-    result->data_instructions = malloc(sizeof(Instruction*) * 10);
-    result->code_instructions = malloc(sizeof(Instruction*) * 10);
+    result->data_instructions = malloc(sizeof(Instruction*) * MAX_DATA_COUNT);
+    result->code_instructions = malloc(sizeof(Instruction*) * MAX_CODE_COUNT);
     result->labels = hashmap_create();
     result->memory_locations = hashmap_create();
     result->data_count = 0;
     result->code_count = 0;
-    int data_capacite = 10, code_capacite = 10;
+    int data_capacite = MAX_DATA_COUNT, code_capacite = MAX_CODE_COUNT;
 
     char line[MAX_LINE_LENGTH];
     int in_data_section = 0, in_code_section = 0;
@@ -136,7 +159,7 @@ ParserResult* parse(const char* filename)
                 data_capacite *= 2;
                 result->data_instructions = realloc(result->data_instructions, sizeof(Instruction*) * data_capacite);
                 if (result->data_instructions == NULL) {
-                    perror("Erreur de réallocation de mémoire");
+                    puts("Erreur de réallocation de mémoire");
                     fclose(file);
                     return NULL;
                 }
@@ -152,7 +175,7 @@ ParserResult* parse(const char* filename)
                 code_capacite *= 2;
                 result->code_instructions = realloc(result->code_instructions, sizeof(Instruction*) * code_capacite);
                 if (result->code_instructions == NULL) {
-                    perror("Erreur de réallocation de mémoire");
+                    puts("Erreur de réallocation de mémoire");
                     fclose(file);
                     return NULL;
                 }
@@ -231,15 +254,18 @@ int search_and_replace(char** str, HashMap* values)
     if (!str || !*str || !values) return 0;
     int replaced = 0;
     char* input = *str;
-    for (int i = 0; i < values->size; i++) {
-        if (values->table[i].key && values->table[i].key != TOMBSTONE) {
+    printf("str: %s\n", input);
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (values->table[i].key != NULL && values->table[i].key != TOMBSTONE)
+        {
+            printf("\tvalues: %s %i\n", values->table[i].key, *(int*)values->table[i].value);
             char* key = values->table[i].key;
-            int value = (int)(long)values->table[i].value;
+            int value = *(int*)values->table[i].value;
 
             char* substr = strstr(input, key);
             if (substr) {
                 char replacement[64];
-                snprintf(replacement, sizeof(replacement), "%d", value);
+                snprintf(replacement, sizeof(replacement), "[%d]", value);
 
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);
