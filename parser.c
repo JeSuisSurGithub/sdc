@@ -218,7 +218,7 @@ char* trim(char* str)
 {
     while (*str == ' ' || *str == '\t' || * str == '\n' || * str == '\r') str++;
     char* end = str + strlen (str) - 1;
-    while ( end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r'))
+    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r'))
     {
         *end = '\0';
         end--;
@@ -268,4 +268,35 @@ int search_and_replace(char** str, HashMap* values)
     }
 
     return replaced;
+}
+
+int resolve_constants(ParserResult* result)
+{
+    if (!result) {
+        return 0;
+    }
+
+    for (int i = 0; i < result->code_count; i++)
+    {
+        Instruction *instr = result->code_instructions[i];
+        if (instr->operand1) {
+            search_and_replace(&instr->operand1, result->memory_locations);
+        }
+        if (instr->operand2) {
+            search_and_replace(&instr->operand2, result->memory_locations);
+        }
+    }
+
+    for (int i = 0; i < result->code_count; i++)
+    {
+        Instruction *instr = result->code_instructions[i];
+        if (instr->operand1) {
+            search_and_replace(&instr->operand1, result->labels);
+        }
+        if (instr->operand2) {
+            search_and_replace(&instr->operand2, result->labels);
+        }
+    }
+
+    return 1;
 }

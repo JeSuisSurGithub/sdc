@@ -27,4 +27,13 @@ void handle_MOV(CPU* cpu, void* src, void* dest);
 CPU* setup_test_environment();
 void* resolve_addressing(CPU *cpu, const char *operand);
 
+void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count);
+int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest);
+int execute_instruction(CPU *cpu, Instruction *instr);
+Instruction* fetch_next_instruction(CPU *cpu);
+int run_program(CPU *cpu);
+void print_registers(CPU *cpu);
+int push_value(CPU *cpu, int value);
+int pop_value(CPU *cpu, int *dest);
+
 #endif /* CPU_H */

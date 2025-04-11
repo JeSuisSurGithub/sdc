@@ -15,9 +15,9 @@ int main() {
 
     printf("CPU initialisé avec succès !\n");
 
-    ParserResult* parser = parse("exemple.asm");
+    ParserResult* res = parse("exemple.asm");
 
-    allocate_variables(cpu, parser->data_instructions , parser->data_count);
+    allocate_variables(cpu, res->data_instructions , res->data_count);
 
     printf("Segment DS alloué avec succès !\n");
 
@@ -51,7 +51,7 @@ int main() {
     print_data_segment(cpu);
 
     cpu_destroy(cpu);
-    free_parser_result(parser);
+    free_parser_result(res);
     printf("CPU détruit et mémoire libérée.\n");
 
     return EXIT_SUCCESS;
