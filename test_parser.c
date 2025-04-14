@@ -13,7 +13,7 @@ int main(void)
 
     printf("Instructions .data (%d) :\n", result->data_count);
     for (int i = 0; i < result->data_count; i++) {
-        printf("%s %s %s\n",
+        printf("'%s '%s' '%s'\n",
                result->data_instructions[i]->mnemonic,
                result->data_instructions[i]->operand1,
                result->data_instructions[i]->operand2);
@@ -21,7 +21,7 @@ int main(void)
 
     printf("Instructions .code (%d) :\n", result->code_count);
     for (int i = 0; i < result->code_count; i++) {
-        printf("%s %s %s\n",
+        printf("'%s' '%s' '%s'\n",
                result->code_instructions[i]->mnemonic,
                result->code_instructions[i]->operand1,
                result->code_instructions[i]->operand2);
@@ -32,7 +32,7 @@ int main(void)
     	char* label = result->labels->table[i].key;
         if (label) {
         	int* addr = (int*)hashmap_get(result->labels, label);
-            printf("%s -> %d\n", label, *addr);
+            printf("'%s' -> %d\n", label, *addr);
         }
     }
 
@@ -41,7 +41,7 @@ int main(void)
     	char* mnemonic = result->memory_locations->table[i].key;
         if (mnemonic) {
             int* addr = hashmap_get(result->memory_locations, mnemonic);
-            printf("%s -> %d\n", mnemonic, *addr);
+            printf("'%s' -> %d\n", mnemonic, *addr);
         }
     }
 

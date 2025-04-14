@@ -93,7 +93,7 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
     while (line[i] == ' ') i++;
 
     // Lire le reste de la ligne (instruction)
-    int n = sscanf(line + i, "%s %[^,],%[^\n]", mnemonic, op1, op2);
+    int n = sscanf(line + i, "%s %[^,], %[^\n]", mnemonic, op1, op2);
 
     if (n < 1) {
         puts("parse_code_instruction: invalid format");
@@ -254,18 +254,16 @@ int search_and_replace(char** str, HashMap* values)
     if (!str || !*str || !values) return 0;
     int replaced = 0;
     char* input = *str;
-    printf("str: %s\n", input);
     for (int i = 0; i < TABLE_SIZE; i++) {
         if (values->table[i].key != NULL && values->table[i].key != TOMBSTONE)
         {
-            printf("\tvalues: %s %i\n", values->table[i].key, *(int*)values->table[i].value);
             char* key = values->table[i].key;
             int value = *(int*)values->table[i].value;
 
             char* substr = strstr(input, key);
             if (substr) {
                 char replacement[64];
-                snprintf(replacement, sizeof(replacement), "[%d]", value);
+                snprintf(replacement, sizeof(replacement), "%d", value);
 
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);

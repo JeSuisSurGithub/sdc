@@ -158,7 +158,7 @@ void print_data_segment(CPU *cpu)
 		Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
    		for (int i = DS->start; i < (DS->start + DS->size); i++) {
     		if (cpu->memory_handler->memory[i] != NULL) {
-    			printf("DS[%i] = %i\n", i, *(int*)(cpu->memory_handler->memory[i]));
+    			printf("DS[%i] = %i | ", i, *(int*)(cpu->memory_handler->memory[i]));
     		}
     	}
 	}
@@ -232,7 +232,7 @@ CPU* setup_test_environment()
 {
     CPU* cpu = cpu_init(1024);
     if (!cpu) {
-        printf("Error: CPU initialition failed\n");
+        puts("Error: CPU initialition failed");
         return NULL;
     }
 
@@ -258,13 +258,14 @@ CPU* setup_test_environment()
         }
     }
 
-    printf("Test environnment initialized\n");
+    puts("Test environnment initialized");
     return cpu;
 }
 
 void* resolve_addressing(CPU *cpu, const char *operand)
 {
-    void* imm = immediate_addressing(cpu, operand);
+    void* imm = 
+    immediate_addressing(cpu, operand);
     if (imm != NULL) return imm;
 
     void* reg = register_addressing(cpu, operand);
@@ -300,38 +301,56 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
 {
     if (!cpu || !instr) {
-        return 0;
+        return -1;
     }
 
-    int *ip = (int *)hashmap_get(cpu->context, "IP");
-    int *zf = (int *)hashmap_get(cpu->context, "ZF");
-    int *sf = (int *)hashmap_get(cpu->context, "SF");
+    int* ip = (int*)hashmap_get(cpu->context, "IP");
+    int* zf = (int*)hashmap_get(cpu->context, "ZF");
+    int* sf = (int*)hashmap_get(cpu->context, "SF");
 
     if (strcmp(instr->mnemonic, "MOV") == 0) {
-        if (!src || !dest) return 0;
+        if (!src || !dest) {
+            puts("handle_instruction(): MOV Invalid operand");
+            return -1;
+        }
         *(int *)dest = *(int *)src;
     }
     else if (strcmp(instr->mnemonic, "ADD") == 0) {
-        if (!src || !dest) return 0;
+        if (!src || !dest) {
+            puts("handle_instruction(): ADD Invalid operand");
+            return -1;
+        }
         *(int *)dest += *(int *)src;
     }
     else if (strcmp(instr->mnemonic, "CMP") == 0) {
-        if (!src || !dest) return 0;
+        if (!src || !dest) {
+            puts("handle_instruction(): CMP Invalid operand");
+            return -1;
+        }
         int result = *(int*)dest - *(int*)src;
         *zf = (result == 0) ? 1 : 0;
         *sf = (result < 0) ? 1 : 0;
     }
     else if (strcmp(instr->mnemonic, "JMP") == 0) {
-        if (!dest) return 0;
+        if (!dest) {
+            puts("handle_instruction(): JMP Invalid operand");
+            return -1;
+        }
         *ip = *(int *)dest;
     }
     else if (strcmp(instr->mnemonic, "JZ") == 0) {
-        if (!src || !zf) return 0;
-        if (*zf == 1) *ip = *(int *)src;
+        if (!dest || !zf) {
+            puts("handle_instruction(): JZ Invalid operand");
+            return -1;
+        }
+        if (*zf == 1) *ip = *(int*)dest;
     }
     else if (strcmp(instr->mnemonic, "JNZ") == 0) {
-        if (!src || !zf) return 0;
-        if (*zf == 0) *ip = *(int *)src;
+        if (!dest || !zf) {
+            puts("handle_instruction(): JNZ Invalid operand");
+            return -1;
+        }
+        if (*zf == 0) *ip = *(int*)dest;
     }
     else if (strcmp(instr->mnemonic, "HALT") == 0) {
         Segment *cs_seg = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
@@ -340,33 +359,44 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
     else if (strcmp(instr->mnemonic, "PUSH") == 0) {
         if (!src) {
             int *ax = (int *)hashmap_get(cpu->context, "AX");
-            if (!ax) return 0;
+            if (!ax) {
+                puts("handle_instruction(): PUSH Invalid operand");
+                return -1;
+            }
             return push_value(cpu, *ax);
         }
         return push_value(cpu, *(int *)src);
     }
     else if (strcmp(instr->mnemonic, "POP") == 0) {
         int value;
-        if (pop_value(cpu, &value)) return 0;
+        if (pop_value(cpu, &value)) return -1;
 
         if (!dest) {
             int *ax = (int *)hashmap_get(cpu->context, "AX");
-            if (!ax) return 0;
+            if (!ax) {
+                puts("handle_instruction(): POP Invalid operand");
+                return -1;
+            }
             *ax = value;
         } else {
             *(int *)dest = value;
         }
-        return 1;
+        return 0;
     }
     else {
-        return 0; // Instruction non reconnue
+        puts("handle_instruction(): Unrecognized instruction");
+        return -1;
     }
 
-    return 1;
+    return 0;
 }
 
-int execute_instruction(CPU *cpu, Instruction *instr) {
-    if (!cpu || !instr) return 0;
+int execute_instruction(CPU *cpu, Instruction *instr)
+{
+    if (!cpu || !instr){
+        puts("execute_instruction(): Invalid arguments");
+        return -1;
+    }
 
     void* src = NULL;
     void* dest = NULL;
@@ -375,21 +405,24 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
         dest = resolve_addressing(cpu, instr->operand1);
         if (!dest && strcmp(instr->mnemonic, "JMP") != 0 &&
             strcmp(instr->mnemonic, "JZ") != 0 && strcmp(instr->mnemonic, "JNZ") != 0) {
-            return 0;
+            puts("execute_instruction(): Invalid operand 1");
+            return -1;
         }
     }
 
     if (instr->operand2 != NULL && strcmp(instr->operand2, "") != 0) {
         src = resolve_addressing(cpu, instr->operand2);
         if (!src && strcmp(instr->mnemonic, "CMP") != 0) {
-            return 0;
+            puts("execute_instruction(): Invalid operand 2");
+            return -1;
         }
     }
 
     return handle_instruction(cpu, instr, src, dest);
 }
 
-Instruction* fetch_next_instruction(CPU *cpu) {
+Instruction* fetch_next_instruction(CPU *cpu)
+{
     if (!cpu) return NULL;
 
     int* ip = (int*)hashmap_get(cpu->context, "IP");
@@ -403,56 +436,54 @@ Instruction* fetch_next_instruction(CPU *cpu) {
     Instruction *instr = (Instruction *)load(cpu->memory_handler, "CS", *ip);
     if (!instr) return NULL;
 
-    if (strcmp(instr->mnemonic, "JMP") != 0 &&
-        strcmp(instr->mnemonic, "JZ") != 0 &&
-        strcmp(instr->mnemonic, "JNZ") != 0) {
-        (*ip)++;
-    }
+    (*ip)++;
 
     return instr;
 }
 
-int run_program(CPU *cpu) {
-    if (!cpu) return 0;
+int run_program(CPU *cpu)
+{
+    if (!cpu) return -1;
 
-    printf("=== Initial CPU State ===\n");
+    puts("=== Initial CPU State ===");
     print_data_segment(cpu);
     print_registers(cpu);
 
     char input;
     while (1) {
-        printf("\nPress Enter to execute next instruction or 'q' to quit...");
+        puts("\nPress Enter to execute next instruction or 'q' to quit...");
         input = getchar();
         if (input == 'q') break;
 
         Instruction *instr = fetch_next_instruction(cpu);
         if (!instr) {
-            printf("No more instructions to execute or error occurred.\n");
+            puts("No more instructions to execute or error occurred.");
             break;
         }
 
-        printf("\nExecuting: %s", instr->mnemonic);
+        printf("Executing: %s", instr->mnemonic);
         if (instr->operand1) printf(" %s", instr->operand1);
         if (instr->operand2) printf(", %s", instr->operand2);
-        printf("\n");
+        putchar('\n');
 
-        if (!execute_instruction(cpu, instr)) {
-            printf("Error executing instruction.\n");
+        if (execute_instruction(cpu, instr) < 0) {
+            puts("Error executing instruction.");
             break;
         }
 
         print_registers(cpu);
     }
 
-    printf("\n=== Final CPU State ===\n");
+    puts("=== Final CPU State ===");
     print_data_segment(cpu);
     print_registers(cpu);
 
-    return 1;
+    return 0;
 }
 
 
-void print_registers(CPU *cpu) {
+void print_registers(CPU *cpu)
+{
     if (!cpu) return;
 
     printf("Registers:\n");
@@ -460,13 +491,14 @@ void print_registers(CPU *cpu) {
     for (int i = 0; i < 9; i++) {
         int* val = (int*)hashmap_get(cpu->context, reg_names[i]);
         if (val) {
-            printf("%s: %d\n", reg_names[i], *val);
+            printf("%s: %d | ", reg_names[i], *val);
         }
     }
 }
 
 
-int push_value(CPU *cpu, int value) {
+int push_value(CPU *cpu, int value)
+{
     if (!cpu) return -1;
 
     int* sp = (int*)hashmap_get(cpu->context, "SP");
