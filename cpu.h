@@ -7,7 +7,7 @@
 
 #define STACK_SIZE 128
 
-typedef struct CPU{
+typedef struct CPU {
     MemoryHandler* memory_handler;
     HashMap* context;
     HashMap* constant_pool;

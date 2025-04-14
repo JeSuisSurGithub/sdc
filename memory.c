@@ -180,24 +180,7 @@ int remove_segment(MemoryHandler* handler, const char* name)
 
     handler->total_size -= cible->size;
 
-    Segment* avant = NULL;
-    Segment* apres = NULL;
-    Segment* prec_avant = NULL;
-    Segment* prec_apres = NULL;
-
-    // Recherche des avant et après
-    for (Segment *it = handler->free_list, *prec = NULL; it != NULL; prec = it, it = it->next) {
-        if ((it->start + it->size) == cible->start) {
-            avant = it;
-            prec_avant = prec;
-        }
-        if ((cible->start + cible->size) == it->start) {
-            apres = it;
-            prec_apres = prec;
-        }
-    }
-
-    // Nouveau segment restauré
+    // Nouveau segment à restaurer
     Segment* new_seg = (Segment*)malloc(sizeof(Segment));
     if (new_seg == NULL) {
         puts("remove_segment(): malloc failed");
@@ -206,9 +189,17 @@ int remove_segment(MemoryHandler* handler, const char* name)
     new_seg->start = cible->start;
     new_seg->size = cible->size;
 
-    free(cible);
+    // Recherche de l'avant
+    Segment* avant = NULL;
+    Segment* prec_avant = NULL;
+    for (Segment *it = handler->free_list, *prec = NULL; it != NULL; prec = it, it = it->next) {
+        if ((it->start + it->size) == cible->start) {
+            avant = it;
+            prec_avant = prec;
+        }
+    }
 
-    // On y ajoute les blocs adjacents
+    // Suppression de l'avant
     if (avant != NULL) {
         if (prec_avant == NULL) {
             handler->free_list = avant->next;
@@ -219,6 +210,16 @@ int remove_segment(MemoryHandler* handler, const char* name)
         new_seg->start -= avant->size;
         new_seg->size += avant->size;
         free(avant);
+    }
+
+    // De meme pour l'après
+    Segment* apres = NULL;
+    Segment* prec_apres = NULL;
+    for (Segment *it = handler->free_list, *prec = NULL; it != NULL; prec = it, it = it->next) {
+        if ((cible->start + cible->size) == it->start) {
+            apres = it;
+            prec_apres = prec;
+        }
     }
     if (apres != NULL) {
         if (prec_apres == NULL) {
@@ -233,6 +234,8 @@ int remove_segment(MemoryHandler* handler, const char* name)
 
     new_seg->next = handler->free_list;
     handler->free_list = new_seg;
+
+    free(cible);
 
     return 0;
 }

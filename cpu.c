@@ -85,11 +85,10 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "SP"));
 
     Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
-	for (int i = 0; i < (DS->size / sizeof(int)); i++)
+	for (int i = 0; i < DS->size; i++)
     {
-    	if (cpu->memory_handler->memory[i] != NULL) {
-    		free(cpu->memory_handler->memory[i]);
-    	}
+        void* var = load(cpu->memory_handler, "DS", i);
+        if (var != NULL) free(var);
 	}
     remove_segment(cpu->memory_handler, "SS");
     remove_segment(cpu->memory_handler, "CS");
@@ -137,25 +136,32 @@ void* load(MemoryHandler* handler, const char* segment_name, int pos)
 
 void allocate_variables(CPU* cpu, Instruction** data_instructions, int data_count)
 {
+    // Pré-calcul
     unsigned int ds_size = 0;
     for (int i = 0; i < data_count; i++) {
-        char* arr = data_instructions[i]->operand2;
+        char* it = data_instructions[i]->operand2;
+        ds_size++;
+        while (*it != '\0') {
+            ds_size += (*it++ == ',');
+        }
+    }
 
-        unsigned int ins_size = 0;
-        char* cur = strtok(arr, ",");
+    Segment* SS = hashmap_get(cpu->memory_handler->allocated, "SS");
+    if (create_segment(cpu->memory_handler, "DS", SS->start - ds_size, ds_size) < 0) {
+        puts("allocate_variables(): create_segment failed");
+    }
+    unsigned int ds_idx = 0;
+    for (int i = 0; i < data_count; i++) {
+        char* cur = strtok(data_instructions[i]->operand2, ",");
 
         while (cur != NULL)
         {
-            cpu->memory_handler->memory[ds_size + ins_size] = malloc(sizeof(int));
-            *(int*)(cpu->memory_handler->memory[ds_size + ins_size]) = atoi(cur);
+            int* var = malloc(sizeof(int));
+            (*var) = atoi(cur);
+            store(cpu->memory_handler, "DS", ds_idx, var);
             cur = strtok(NULL, ",");
-            ins_size++;
+            ds_idx++;
         }
-
-        ds_size += ins_size;
-    }
-    if (create_segment(cpu->memory_handler, "DS", 0, ds_size * sizeof(int)) < 0) {
-        puts("allocate_variables(): create_segment failed");
     }
 }
 
@@ -163,11 +169,13 @@ void print_data_segment(CPU* cpu)
 {
     if (cpu != NULL) {
 		Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
-   		for (int i = DS->start; i < (DS->start + DS->size); i++) {
-    		if (cpu->memory_handler->memory[i] != NULL) {
-    			printf("DS[%i] = %i | ", i, *(int*)(cpu->memory_handler->memory[i]));
+   		for (int i = 0; i < DS->size; i++) {
+            int* var = load(cpu->memory_handler, "DS", i);
+    		if (var != NULL) {
+    			printf("DS[%i] = %i | ", i, *var);
     		}
     	}
+        putchar('\n');
 	}
 }
 
@@ -214,7 +222,7 @@ void* memory_direct_addressing(CPU* cpu, const char* operand)
     if (matches("^\\[[0-9]+\\]$", operand)) {
         int addr = 0;
         sscanf(operand, "[%i]", &addr);
-        return cpu->memory_handler->memory[addr];
+        return load(cpu->memory_handler, "DS", addr);
     }
     return NULL;
 }
@@ -224,7 +232,8 @@ void* register_indirect_addressing(CPU* cpu, const char* operand)
     if (matches("^\\[(A|B|C|D)X\\]$", operand)) {
         char addr[3] = {0};
         sscanf(operand, "[%02s]", addr);
-        return cpu->memory_handler->memory[*(int*)hashmap_get(cpu->context, addr)];
+
+        return load(cpu->memory_handler, "DS", *(int*)hashmap_get(cpu->context, addr));
     }
     return NULL;
 }
@@ -294,9 +303,7 @@ void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_c
         return;
     }
 
-    Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
-
-    if (create_segment(cpu->memory_handler, "CS", (DS->start + DS->size), code_count) < 0) {
+    if (create_segment(cpu->memory_handler, "CS", 0, code_count) < 0) {
         puts("allocate_code_segment(): create_segment failed");
     }
 
@@ -499,7 +506,6 @@ void print_registers(CPU* cpu)
 {
     if (cpu == NULL) return;
 
-    printf("Registers:\n");
     const char* reg_names[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP"};
     for (int i = 0; i < 9; i++) {
         int* val = (int*)hashmap_get(cpu->context, reg_names[i]);

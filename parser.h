@@ -17,13 +17,13 @@
 
 #define MAX_LINE_LEN 180
 
-typedef struct {
+typedef struct Instruction {
 	char* mnemonic;
 	char* operand1;
 	char* operand2;
 } Instruction ;
 
-typedef struct {
+typedef struct ParserResult {
 	Instruction** data_instructions;
 	int data_count;
 	Instruction** code_instructions;
