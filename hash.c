@@ -81,7 +81,7 @@ void* hashmap_get(HashMap* map, const char* key)
         } else if (strcmp(map->table[hash].key, key) == 0) {
             return map->table[hash].value;
         } else {
-            printf("hashmap_get: unknown error searching for %s\n", key);
+            // printf("hashmap_get: unknown error searching for %s\n", key);
         }
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);
@@ -111,7 +111,7 @@ int hashmap_remove(HashMap* map, const char* key)
             map->size--;
             return 0;
         } else {
-            puts("hashmap_remove: unknown error");
+            // puts("hashmap_remove: unknown error");
         }
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);

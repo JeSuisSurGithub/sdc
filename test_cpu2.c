@@ -3,6 +3,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+CPU* setup_test_environment()
+{
+    CPU* cpu = cpu_init(1024);
+    if (cpu == NULL) {
+        puts("setup_test_environment(): cpu_init failed");
+        return NULL;
+    }
+
+    int* ax = (int*)hashmap_get(cpu->context, "AX");
+    int* bx = (int*)hashmap_get(cpu->context, "BX");
+    int* cx = (int*)hashmap_get(cpu->context, "CX");
+    int* dx = (int*)hashmap_get(cpu->context, "DX");
+
+    *ax = 3;
+    *bx = 6;
+    *cx = 100;
+    *dx = 5;
+
+    if (!hashmap_get(cpu->memory_handler->allocated, "DS")) {
+        if (create_segment(cpu->memory_handler, "DS", 0, 10 * sizeof(int)) < 0) {
+            puts("setup_test_environment(): create_segment failed");
+        }
+
+        for (int i = 0; i < 10; i++) {
+            int* value = (int*)malloc(sizeof(int));
+            *value = i * 10 + 5;
+            store(cpu->memory_handler, "DS", i, value);
+        }
+    }
+
+    puts("setup_test_environment(): test environnment initialized");
+    return cpu;
+}
+
 int main(void)
 {
     CPU* cpu = setup_test_environment();
@@ -45,6 +79,6 @@ int main(void)
     printf("\tdsdx: %i\n", *dsdx);
 
     cpu_destroy(cpu);
-    return EXIT_SUCCESS;
+    return 0;
 }
 

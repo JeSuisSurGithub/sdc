@@ -7,4 +7,6 @@
 /test_hash
 /test_mem
 /test_parser
+/test_perf_parser
+/test_perf_cpu
 /vgcore.*

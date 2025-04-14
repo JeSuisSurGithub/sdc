@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 int run_program(CPU* cpu)
 {
@@ -14,27 +15,16 @@ int run_program(CPU* cpu)
 
     char input = 0;
     while (1) {
-        puts("Press Enter to execute next instruction or 'q' to quit...");
-        input = getchar();
-        if (input == 'q') break;
-
         Instruction *instr = fetch_next_instruction(cpu);
         if (instr == NULL) {
             puts("No more instructions to execute");
             break;
         }
 
-        printf("Executing: %s", instr->mnemonic);
-        if (instr->operand1 && strcmp(instr->operand1, "") != 0) printf(" %s", instr->operand1);
-        if (instr->operand2 && strcmp(instr->operand2, "") != 0) printf(", %s", instr->operand2);
-        putchar('\n');
-
         if (execute_instruction(cpu, instr) < 0) {
             puts("run_program(): error executing instruction");
             break;
         }
-
-        print_registers(cpu);
     }
 
     puts("\n=== Final CPU State ===");
@@ -47,7 +37,8 @@ int run_program(CPU* cpu)
 
 int main(void)
 {
-    ParserResult* res = parse("exemple.asm");
+    time_t start = clock();
+    ParserResult* res = parse("perf_boucle.asm");
     if (resolve_constants(res) < 0) return -1;
 
     CPU* cpu = cpu_init(1024);
@@ -59,5 +50,7 @@ int main(void)
 
     free_parser_result(res);
     cpu_destroy(cpu);
+    time_t end = clock();
+    printf("execution time: %f", (float)(end-start) / CLOCKS_PER_SEC);
     return 0;
 }

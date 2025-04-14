@@ -81,6 +81,13 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "ZF"));
     free(hashmap_get(cpu->context, "SF"));
 
+    int* bp = hashmap_get(cpu->context, "BP");
+    int* sp = hashmap_get(cpu->context, "SP");
+    while (*sp < *bp) {
+        int* value = load(cpu->memory_handler, "SS", *sp++);
+        free(value);
+    }
+
     free(hashmap_get(cpu->context, "BP"));
     free(hashmap_get(cpu->context, "SP"));
 
@@ -110,10 +117,6 @@ void* store(MemoryHandler* handler, const char* segment_name, int pos, void* dat
     Segment* seg = hashmap_get(handler->allocated, segment_name);
 
     if ((seg != NULL) && (pos <= seg->size)) {
-        if (handler->memory[seg->start + pos] != NULL) {
-            free(handler->memory[seg->start + pos]);
-            handler->memory[seg->start + pos] = NULL;
-        }
         handler->memory[seg->start + pos] = data;
         return handler->memory[seg->start + pos];
     }
@@ -243,40 +246,6 @@ void handle_MOV(CPU* cpu, void* src, void* dest)
     int* isrc = (int*)src;
     int* idest = (int*)dest;
     *(idest) = *(isrc);
-}
-
-CPU* setup_test_environment()
-{
-    CPU* cpu = cpu_init(1024);
-    if (cpu == NULL) {
-        puts("setup_test_environment(): cpu_init failed");
-        return NULL;
-    }
-
-    int* ax = (int*)hashmap_get(cpu->context, "AX");
-    int* bx = (int*)hashmap_get(cpu->context, "BX");
-    int* cx = (int*)hashmap_get(cpu->context, "CX");
-    int* dx = (int*)hashmap_get(cpu->context, "DX");
-
-    *ax = 3;
-    *bx = 6;
-    *cx = 100;
-    *dx = 5;
-
-    if (!hashmap_get(cpu->memory_handler->allocated, "DS")) {
-        if (create_segment(cpu->memory_handler, "DS", 0, 10 * sizeof(int)) < 0) {
-            puts("setup_test_environment(): create_segment failed");
-        }
-
-        for (int i = 0; i < 10; i++) {
-            int* value = (int*)malloc(sizeof(int));
-            *value = i * 10 + 5;
-            store(cpu->memory_handler, "DS", i, value);
-        }
-    }
-
-    puts("setup_test_environment(): test environnment initialized");
-    return cpu;
 }
 
 void* resolve_addressing(CPU* cpu, const char* operand)
@@ -461,47 +430,6 @@ Instruction* fetch_next_instruction(CPU* cpu)
     return instr;
 }
 
-int run_program(CPU* cpu)
-{
-    if (cpu == NULL) return -1;
-
-    puts("=== Initial CPU State ===\n");
-    print_data_segment(cpu);
-    print_registers(cpu);
-
-    char input = 0;
-    while (1) {
-        puts("Press Enter to execute next instruction or 'q' to quit...");
-        input = getchar();
-        if (input == 'q') break;
-
-        Instruction *instr = fetch_next_instruction(cpu);
-        if (instr == NULL) {
-            puts("No more instructions to execute");
-            break;
-        }
-
-        printf("Executing: %s", instr->mnemonic);
-        if (instr->operand1) printf(" %s", instr->operand1);
-        if (instr->operand2) printf(", %s", instr->operand2);
-        putchar('\n');
-
-        if (execute_instruction(cpu, instr) < 0) {
-            puts("run_program(): error executing instruction");
-            break;
-        }
-
-        print_registers(cpu);
-    }
-
-    puts("\n=== Final CPU State ===");
-    print_data_segment(cpu);
-    print_registers(cpu);
-
-    return 0;
-}
-
-
 void print_registers(CPU* cpu)
 {
     if (cpu == NULL) return;
@@ -516,49 +444,48 @@ void print_registers(CPU* cpu)
     putchar('\n');
 }
 
-
 int push_value(CPU* cpu, int value)
 {
     if (cpu == NULL) return -1;
 
-    int* sp = (int*)hashmap_get(cpu->context, "SP");
-    if (sp == NULL) return -1;
+    int* sp = hashmap_get(cpu->context, "SP");
+    if (sp == NULL) return -2;
 
     if (*sp < 0) {
         printf("push_value(): stack overflow!\n");
-        return -1;
+        return -3;
     }
 
-    int* val_ptr = (int*)malloc(sizeof(int));
-    if (val_ptr == NULL) return -1;
-    *val_ptr = value;
-
-    store(cpu->memory_handler, "SS", *sp, val_ptr);
+    int* val_mem = (int*)malloc(sizeof(int));
+    if (val_mem == NULL) return -4;
+    (*val_mem) = value;
+    store(cpu->memory_handler, "SS", *sp, val_mem);
 
     (*sp)--;
 
     return 0;
 }
 
-int pop_value(CPU* cpu, int* dest) {
+int pop_value(CPU* cpu, int* dest)
+{
     if (cpu == NULL || dest == NULL) return -1;
 
     int* sp = (int*)hashmap_get(cpu->context, "SP");
     int* bp = (int*)hashmap_get(cpu->context, "BP");
-    if (sp == NULL || bp == NULL) return -1;
+    if (sp == NULL || bp == NULL) return -2;
 
     if (*sp >= *bp) {
         printf("pop_value(): stack underflow!\n");
-        return -1;
+        return -3;
     }
 
     (*sp)++;
 
-    int* val_ptr = (int*)load(cpu->memory_handler, "SS", *sp);
-    if (val_ptr == NULL) return -1;
+    int* val_mem = load(cpu->memory_handler, "SS", *sp);
+    if (val_mem == NULL) return -4;
 
-    *dest = *val_ptr;
-    free(val_ptr);
+    *dest = *val_mem;
+    free(val_mem);
 
     return 0;
 }
