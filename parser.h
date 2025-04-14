@@ -3,9 +3,19 @@
 
 #include "hash.h"
 
+#define DEFAULT_CODE_COUNT 10
+#define DEFAULT_DATA_COUNT 10
 
-#define MAX_CODE_COUNT 10 
-#define MAX_DATA_COUNT 10 
+#define MAX_NAME_LEN 40
+#define MAX_TYPE_LEN 12
+#define MAX_VALUE_LEN 24
+
+#define MAX_LABEL_LEN 80
+#define MAX_INS_LEN 12
+#define MAX_OP1_LEN 40
+#define MAX_OP2_LEN 40
+
+#define MAX_LINE_LEN 180
 
 typedef struct {
 	char* mnemonic;
@@ -21,7 +31,6 @@ typedef struct {
 	HashMap* labels;
 	HashMap* memory_locations;
 } ParserResult;
-
 
 Instruction* parse_data_instruction(const char* line, HashMap* memory_locations);
 Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_count);

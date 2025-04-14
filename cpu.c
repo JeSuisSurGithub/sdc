@@ -1,4 +1,5 @@
- #include "cpu.h"
+#include "cpu.h"
+
 #include "hash.h"
 #include "memory.h"
 
@@ -11,17 +12,20 @@ CPU* cpu_init(int memory_size)
 {
     CPU* cpu = (CPU*)malloc(sizeof(CPU));
     if (!cpu) {
+        puts("cpu_init(): malloc failed");
         return NULL;
     }
 
     cpu->memory_handler = memory_init(memory_size);
     if (cpu->memory_handler == NULL) {
+        puts("cpu_init(): memory_init failed");
         free(cpu);
         return NULL;
     }
 
     cpu->context = hashmap_create();
     if (cpu->context == NULL) {
+        puts("cpu_init(): hashmap_create failed");
         memory_destroy(cpu->memory_handler);
         free(cpu);
         return NULL;
@@ -29,6 +33,7 @@ CPU* cpu_init(int memory_size)
 
     cpu->constant_pool = hashmap_create();
     if (cpu->context == NULL) {
+        puts("cpu_init(): hashmap_create failed ()");
         hashmap_destroy(cpu->context);
         memory_destroy(cpu->memory_handler);
         free(cpu);
@@ -101,7 +106,7 @@ void cpu_destroy(CPU* cpu)
     free(cpu);
 }
 
-void* store(MemoryHandler *handler, const char *segment_name, int pos, void *data)
+void* store(MemoryHandler* handler, const char* segment_name, int pos, void* data)
 {
     Segment* seg = hashmap_get(handler->allocated, segment_name);
 
@@ -114,10 +119,11 @@ void* store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
         return handler->memory[seg->start + pos];
     }
 
+    puts("store(): unreachable address");
     return NULL;
 }
 
-void* load(MemoryHandler *handler, const char *segment_name, int pos)
+void* load(MemoryHandler* handler, const char* segment_name, int pos)
 {
     Segment* seg = hashmap_get(handler->allocated, segment_name);
 
@@ -125,16 +131,17 @@ void* load(MemoryHandler *handler, const char *segment_name, int pos)
         return handler->memory[seg->start + pos];
     }
 
+    puts("load(): unreachable address");
     return NULL;
 }
 
-void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_count)
+void allocate_variables(CPU* cpu, Instruction** data_instructions, int data_count)
 {
-    unsigned ds_size = 0;
+    unsigned int ds_size = 0;
     for (int i = 0; i < data_count; i++) {
         char* arr = data_instructions[i]->operand2;
 
-        unsigned ins_size = 0;
+        unsigned int ins_size = 0;
         char* cur = strtok(arr, ",");
 
         while (cur != NULL)
@@ -152,7 +159,7 @@ void allocate_variables(CPU *cpu, Instruction** data_instructions, int data_coun
     }
 }
 
-void print_data_segment(CPU *cpu)
+void print_data_segment(CPU* cpu)
 {
     if (cpu != NULL) {
 		Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
@@ -169,17 +176,18 @@ int matches(const char* pattern, const char* string)
     regex_t regex;
     int result = regcomp(&regex, pattern, REG_EXTENDED) ;
     if (result) {
-        fprintf(stderr, "Regex compilation failed for pattern: %s\n", pattern);
+        printf("Regex compilation failed for pattern: %s\n", pattern);
         return 0;
     }
     result = regexec(&regex, string, 0, NULL, 0) ;
-    regfree (&regex) ;
+    regfree(&regex);
     return result == 0;
 }
 
-void* immediate_addressing(CPU *cpu, const char *operand)
+void* immediate_addressing(CPU* cpu, const char* operand)
 {
-    if (matches("^[0-9]+$", operand)) {
+    if (matches("^[0-9]+$", operand))
+    {
         int n = atoi(operand);
         int* val = hashmap_get(cpu->constant_pool, operand);
         if (val == NULL) {
@@ -193,7 +201,7 @@ void* immediate_addressing(CPU *cpu, const char *operand)
     return NULL;
 }
 
-void* register_addressing(CPU *cpu, const char *operand)
+void* register_addressing(CPU* cpu, const char* operand)
 {
     if (matches("^(A|B|C|D)X$", operand)) {
         return hashmap_get(cpu->context, operand);
@@ -201,7 +209,7 @@ void* register_addressing(CPU *cpu, const char *operand)
     return NULL;
 }
 
-void* memory_direct_addressing(CPU *cpu, const char *operand)
+void* memory_direct_addressing(CPU* cpu, const char* operand)
 {
     if (matches("^\\[[0-9]+\\]$", operand)) {
         int addr = 0;
@@ -211,7 +219,7 @@ void* memory_direct_addressing(CPU *cpu, const char *operand)
     return NULL;
 }
 
-void* register_indirect_addressing(CPU *cpu, const char* operand)
+void* register_indirect_addressing(CPU* cpu, const char* operand)
 {
     if (matches("^\\[(A|B|C|D)X\\]$", operand)) {
         char addr[3] = {0};
@@ -231,8 +239,8 @@ void handle_MOV(CPU* cpu, void* src, void* dest)
 CPU* setup_test_environment()
 {
     CPU* cpu = cpu_init(1024);
-    if (!cpu) {
-        puts("Error: CPU initialition failed");
+    if (cpu == NULL) {
+        puts("setup_test_environment(): cpu_init failed");
         return NULL;
     }
 
@@ -258,14 +266,13 @@ CPU* setup_test_environment()
         }
     }
 
-    puts("Test environnment initialized");
+    puts("setup_test_environment(): test environnment initialized");
     return cpu;
 }
 
-void* resolve_addressing(CPU *cpu, const char *operand)
+void* resolve_addressing(CPU* cpu, const char* operand)
 {
-    void* imm = 
-    immediate_addressing(cpu, operand);
+    void* imm = immediate_addressing(cpu, operand);
     if (imm != NULL) return imm;
 
     void* reg = register_addressing(cpu, operand);
@@ -277,12 +284,15 @@ void* resolve_addressing(CPU *cpu, const char *operand)
     void* indirect = register_indirect_addressing(cpu, operand);
     if (indirect != NULL) return indirect;
 
+    puts("resolve_addressing(): operand doesn't match with any mode");
     return NULL;
 }
 
-void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count)
+void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_count)
 {
-    if (!cpu || !code_instructions || code_count <= 0) return;
+    if ((cpu == NULL) || (code_instructions == NULL) || code_count <= 0) {
+        return;
+    }
 
     Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
 
@@ -298,9 +308,9 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
     *ip = 0;
 }
 
-int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
+int handle_instruction(CPU* cpu, Instruction* instr, void* src, void* dest)
 {
-    if (!cpu || !instr) {
+    if ((cpu == NULL) || (instr == NULL)) {
         return -1;
     }
 
@@ -311,21 +321,21 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
     if (strcmp(instr->mnemonic, "MOV") == 0) {
         if (!src || !dest) {
             puts("handle_instruction(): MOV Invalid operand");
-            return -1;
+            return -2;
         }
-        *(int *)dest = *(int *)src;
+        handle_MOV(cpu, src, dest);
     }
     else if (strcmp(instr->mnemonic, "ADD") == 0) {
         if (!src || !dest) {
             puts("handle_instruction(): ADD Invalid operand");
-            return -1;
+            return -3;
         }
-        *(int *)dest += *(int *)src;
+        *(int*)dest += *(int*)src;
     }
     else if (strcmp(instr->mnemonic, "CMP") == 0) {
         if (!src || !dest) {
             puts("handle_instruction(): CMP Invalid operand");
-            return -1;
+            return -4;
         }
         int result = *(int*)dest - *(int*)src;
         *zf = (result == 0) ? 1 : 0;
@@ -334,34 +344,34 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
     else if (strcmp(instr->mnemonic, "JMP") == 0) {
         if (!dest) {
             puts("handle_instruction(): JMP Invalid operand");
-            return -1;
+            return -5;
         }
-        *ip = *(int *)dest;
+        *ip = *(int*)dest;
     }
     else if (strcmp(instr->mnemonic, "JZ") == 0) {
         if (!dest || !zf) {
             puts("handle_instruction(): JZ Invalid operand");
-            return -1;
+            return -6;
         }
         if (*zf == 1) *ip = *(int*)dest;
     }
     else if (strcmp(instr->mnemonic, "JNZ") == 0) {
         if (!dest || !zf) {
             puts("handle_instruction(): JNZ Invalid operand");
-            return -1;
+            return -7;
         }
         if (*zf == 0) *ip = *(int*)dest;
     }
     else if (strcmp(instr->mnemonic, "HALT") == 0) {
-        Segment *cs_seg = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
+        Segment* cs_seg = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
         if (cs_seg) *ip = cs_seg->size;
     }
     else if (strcmp(instr->mnemonic, "PUSH") == 0) {
         if (!src) {
-            int *ax = (int *)hashmap_get(cpu->context, "AX");
+            int* ax = (int*)hashmap_get(cpu->context, "AX");
             if (!ax) {
                 puts("handle_instruction(): PUSH Invalid operand");
-                return -1;
+                return -8;
             }
             return push_value(cpu, *ax);
         }
@@ -372,29 +382,28 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest)
         if (pop_value(cpu, &value)) return -1;
 
         if (!dest) {
-            int *ax = (int *)hashmap_get(cpu->context, "AX");
+            int* ax = (int*)hashmap_get(cpu->context, "AX");
             if (!ax) {
                 puts("handle_instruction(): POP Invalid operand");
-                return -1;
+                return -9;
             }
             *ax = value;
         } else {
-            *(int *)dest = value;
+            *(int*)dest = value;
         }
-        return 0;
     }
     else {
-        puts("handle_instruction(): Unrecognized instruction");
-        return -1;
+        puts("handle_instruction(): unrecognized instruction");
+        return -10;
     }
 
     return 0;
 }
 
-int execute_instruction(CPU *cpu, Instruction *instr)
+int execute_instruction(CPU* cpu, Instruction* instr)
 {
-    if (!cpu || !instr){
-        puts("execute_instruction(): Invalid arguments");
+    if ((cpu == NULL) || (instr == NULL)){
+        puts("execute_instruction(): invalid arguments");
         return -1;
     }
 
@@ -403,61 +412,65 @@ int execute_instruction(CPU *cpu, Instruction *instr)
 
     if (instr->operand1 != NULL && strcmp(instr->operand1, "") != 0) {
         dest = resolve_addressing(cpu, instr->operand1);
-        if (!dest && strcmp(instr->mnemonic, "JMP") != 0 &&
-            strcmp(instr->mnemonic, "JZ") != 0 && strcmp(instr->mnemonic, "JNZ") != 0) {
+        if (!dest &&
+            strcmp(instr->mnemonic, "JMP") != 0 &&
+            strcmp(instr->mnemonic, "JZ") != 0 &&
+            strcmp(instr->mnemonic, "JNZ") != 0)
+        {
             puts("execute_instruction(): Invalid operand 1");
-            return -1;
+            return -2;
         }
     }
 
     if (instr->operand2 != NULL && strcmp(instr->operand2, "") != 0) {
         src = resolve_addressing(cpu, instr->operand2);
-        if (!src && strcmp(instr->mnemonic, "CMP") != 0) {
+        if (!src && strcmp(instr->mnemonic, "CMP") != 0)
+        {
             puts("execute_instruction(): Invalid operand 2");
-            return -1;
+            return -3;
         }
     }
 
     return handle_instruction(cpu, instr, src, dest);
 }
 
-Instruction* fetch_next_instruction(CPU *cpu)
+Instruction* fetch_next_instruction(CPU* cpu)
 {
-    if (!cpu) return NULL;
+    if (cpu == NULL) return NULL;
 
     int* ip = (int*)hashmap_get(cpu->context, "IP");
-    if (!ip) return NULL;
+    if (ip == NULL) return NULL;
 
-    Segment *cs_seg = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
-    if (!cs_seg) return NULL;
+    Segment* cs_seg = (Segment*)hashmap_get(cpu->memory_handler->allocated, "CS");
+    if (cs_seg == NULL) return NULL;
 
     if (*ip < 0 || *ip >= cs_seg->size) return NULL;
 
-    Instruction *instr = (Instruction *)load(cpu->memory_handler, "CS", *ip);
-    if (!instr) return NULL;
+    Instruction* instr = (Instruction*)load(cpu->memory_handler, "CS", *ip);
+    if (instr == NULL) return NULL;
 
     (*ip)++;
 
     return instr;
 }
 
-int run_program(CPU *cpu)
+int run_program(CPU* cpu)
 {
-    if (!cpu) return -1;
+    if (cpu == NULL) return -1;
 
-    puts("=== Initial CPU State ===");
+    puts("=== Initial CPU State ===\n");
     print_data_segment(cpu);
     print_registers(cpu);
 
-    char input;
+    char input = 0;
     while (1) {
-        puts("\nPress Enter to execute next instruction or 'q' to quit...");
+        puts("Press Enter to execute next instruction or 'q' to quit...");
         input = getchar();
         if (input == 'q') break;
 
         Instruction *instr = fetch_next_instruction(cpu);
-        if (!instr) {
-            puts("No more instructions to execute or error occurred.");
+        if (instr == NULL) {
+            puts("No more instructions to execute");
             break;
         }
 
@@ -467,14 +480,14 @@ int run_program(CPU *cpu)
         putchar('\n');
 
         if (execute_instruction(cpu, instr) < 0) {
-            puts("Error executing instruction.");
+            puts("run_program(): error executing instruction");
             break;
         }
 
         print_registers(cpu);
     }
 
-    puts("=== Final CPU State ===");
+    puts("\n=== Final CPU State ===");
     print_data_segment(cpu);
     print_registers(cpu);
 
@@ -482,9 +495,9 @@ int run_program(CPU *cpu)
 }
 
 
-void print_registers(CPU *cpu)
+void print_registers(CPU* cpu)
 {
-    if (!cpu) return;
+    if (cpu == NULL) return;
 
     printf("Registers:\n");
     const char* reg_names[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP"};
@@ -494,23 +507,24 @@ void print_registers(CPU *cpu)
             printf("%s: %d | ", reg_names[i], *val);
         }
     }
+    putchar('\n');
 }
 
 
-int push_value(CPU *cpu, int value)
+int push_value(CPU* cpu, int value)
 {
-    if (!cpu) return -1;
+    if (cpu == NULL) return -1;
 
     int* sp = (int*)hashmap_get(cpu->context, "SP");
-    if (!sp) return -1;
+    if (sp == NULL) return -1;
 
     if (*sp < 0) {
-        printf("Stack overflow!\n");
+        printf("push_value(): stack overflow!\n");
         return -1;
     }
 
     int* val_ptr = (int*)malloc(sizeof(int));
-    if (!val_ptr) return -1;
+    if (val_ptr == NULL) return -1;
     *val_ptr = value;
 
     store(cpu->memory_handler, "SS", *sp, val_ptr);
@@ -520,22 +534,22 @@ int push_value(CPU *cpu, int value)
     return 0;
 }
 
-int pop_value(CPU *cpu, int *dest) {
-    if (!cpu || !dest) return -1;
+int pop_value(CPU* cpu, int* dest) {
+    if (cpu == NULL || dest == NULL) return -1;
 
     int* sp = (int*)hashmap_get(cpu->context, "SP");
     int* bp = (int*)hashmap_get(cpu->context, "BP");
-    if (!sp || !bp) return -1;
+    if (sp == NULL || bp == NULL) return -1;
 
     if (*sp >= *bp) {
-        printf("Stack underflow!\n");
+        printf("pop_value(): stack underflow!\n");
         return -1;
     }
 
     (*sp)++;
 
     int* val_ptr = (int*)load(cpu->memory_handler, "SS", *sp);
-    if (!val_ptr) return -1;
+    if (val_ptr == NULL) return -1;
 
     *dest = *val_ptr;
     free(val_ptr);

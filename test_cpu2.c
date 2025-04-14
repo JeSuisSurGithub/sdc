@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main() {
+int main(void)
+{
     CPU* cpu = setup_test_environment();
 
     int* nnn = resolve_addressing(cpu, "999");

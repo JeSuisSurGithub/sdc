@@ -1,22 +1,27 @@
 #include "parser.h"
 #include "hash.h"
+#include "memory.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LINE_LENGTH 256
+Instruction* parse_data_instruction(const char* line, HashMap* memory_locations)
+{
+    Instruction* inst = (Instruction*)malloc(sizeof(Instruction));
+    if (inst == NULL) {
+        puts("parse_data_instruction(): malloc failed");
+        return NULL;
+    }
 
-Instruction* parse_data_instruction(const char *line, HashMap *memory_locations) {
-    Instruction *inst = (Instruction*)malloc(sizeof(Instruction));
-    if (!inst) return NULL;
+    char nom[MAX_NAME_LEN] = {0};
+    char type[MAX_TYPE_LEN] = {0};
+    char valeur[MAX_VALUE_LEN] = {0};
 
-    char nom[100], type[10], valeur[256];
-
-    // Format : nom type valeurs
+    // Nom Type Valeur
     int n = sscanf(line, "%s %s %[^\n]", nom, type, valeur);
     if (n != 3) {
-        puts("parse_data_instruction: invalid format");
+        puts("parse_data_instruction(): invalid format");
         free(inst);
         return NULL;
     }
@@ -25,23 +30,25 @@ Instruction* parse_data_instruction(const char *line, HashMap *memory_locations)
     inst->operand1 = strdup(type);
     inst->operand2 = strdup(valeur);
 
+    // adresse_suiv vit entre plusieurs appels successifs de cette fonctions
     static int adresse_suiv = 0;
-    int nb_elem = 1;
-    for (int i = 0; valeur[i]; i++) {
-        if (valeur[i] == ',') nb_elem++;
-    }
 
     int* adresse_suiv_mem = malloc(sizeof(int));
     if (adresse_suiv_mem == NULL) {
-        puts("parse_data_instruction: malloc failed");
+        puts("parse_data_instruction(): malloc failed (2)");
         free(inst);
         return NULL;
     }
     (*adresse_suiv_mem) = adresse_suiv;
 
-    ;
+    // Compte des éléments
+    int nb_elem = 1;
+    for (int i = 0; valeur[i]; i++) {
+        if (valeur[i] == ',') nb_elem++;
+    }
+
     if (hashmap_insert(memory_locations, inst->mnemonic, adresse_suiv_mem) < 0) {
-        puts("parse_data_instruction: hashmap_insert failed");
+        puts("parse_data_instruction(): hashmap_insert failed");
         free(inst);
         return NULL;
     }
@@ -50,60 +57,64 @@ Instruction* parse_data_instruction(const char *line, HashMap *memory_locations)
     return inst;
 }
 
-Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_count) {
+Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_count)
+{
     Instruction* inst = (Instruction*)malloc(sizeof(Instruction));
-    if (!inst) {
-        puts("parse_code_instruction: malloc failed");
+    if (inst == NULL) {
+        puts("parse_code_instruction(): malloc failed");
         return NULL;
     }
 
-    char label[100] = "", mnemonic[20] = "", op1[100] = "", op2[100] = "";
+    char label[MAX_LABEL_LEN] = {0};
+    char mnemonic[MAX_INS_LEN] = {0};
+    char op1[MAX_OP1_LEN] = {0};
+    char op2[MAX_OP2_LEN] = {0};
+
     int i = 0;
 
-    // Détecter s'il y a un label
-    while (line[i] != '\0' && line[i] != ':' && i < 99) {
+    // Détecter s'il y a un label (strchr???)
+    while (line[i] != '\0' && line[i] != ':' && i < (MAX_LABEL_LEN - 1)) {
         label[i] = line[i];
         i++;
     }
 
+    // Si il y a
     if (line[i] == ':') {
         label[i] = '\0';
-        i++; // Sauter le ":"
 
         int* code_count_mem = malloc(sizeof(int));
         if (code_count_mem == NULL) {
-            puts("parse_code_instruction: malloc failed");
+            puts("parse_code_instruction(): malloc failed (2)");
             free(inst);
             return NULL;
         }
-
         (*code_count_mem) = code_count;
 
         if (hashmap_insert(labels, label, code_count_mem) < 0) {
-            puts("parse_code_instruction: hashmap_insert failed");
+            puts("parse_code_instruction(): hashmap_insert failed");
             free(inst);
             free(code_count_mem);
             return NULL;
         }
+        i++; // Sauter le ":"
     } else {
-        // Pas de label, réinitialisez l'index à 0
+        // Pas de label, retour à l'index à 0
         i = 0;
     }
 
     while (line[i] == ' ') i++;
 
     // Lire le reste de la ligne (instruction)
-    int n = sscanf(line + i, "%s %[^,], %[^\n]", mnemonic, op1, op2);
+    int n = sscanf(line + i, "%s %[^,],%[^\n]", mnemonic, op1, op2);
 
     if (n < 1) {
-        puts("parse_code_instruction: invalid format");
+        puts("parse_code_instruction(): invalid format");
         free(inst);
         return NULL; // Ligne ignorée
     }
 
-    inst->mnemonic = strdup(mnemonic);
-
     // Si l'instruction n'a pas d'opérandes, on remplit les opérandes avec des chaînes vides
+    inst->mnemonic = strdup(mnemonic);
     inst->operand1 = (n >= 2 && op1[0] != '\0') ? strdup(op1) : strdup("");
     inst->operand2 = (n == 3 && op2[0] != '\0') ? strdup(op2) : strdup("");
 
@@ -113,32 +124,66 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
 ParserResult* parse(const char* filename)
 {
     FILE* file = fopen(filename, "r");
-    if (!file) {
-        puts("Erreur lors de l'ouverture du fichier");
+    if (file == NULL) {
+        puts("parse(): cannot open file");
         return NULL;
     }
 
     // Verifications à faire
     ParserResult* result = malloc(sizeof(ParserResult));
-    result->data_instructions = malloc(sizeof(Instruction*) * MAX_DATA_COUNT);
-    result->code_instructions = malloc(sizeof(Instruction*) * MAX_CODE_COUNT);
+    if (result == NULL) {
+        puts("parse(): malloc failed");
+        return NULL;
+    }
+    result->data_instructions = malloc(sizeof(Instruction*) * DEFAULT_DATA_COUNT);
+    if (result->data_instructions == NULL) {
+        puts("parse(): malloc failed (2)");
+        free(result);
+        return NULL;
+    }
+    result->code_instructions = malloc(sizeof(Instruction*) * DEFAULT_CODE_COUNT);
+    if (result->code_instructions == NULL) {
+        puts("parse(): malloc failed (3)");
+        free(result->data_instructions);
+        free(result);
+        return NULL;
+    }
     result->labels = hashmap_create();
+    if (result->labels == NULL) {
+        puts("parse(): hashmap_create failed");
+        free(result->code_instructions);
+        free(result->data_instructions);
+        free(result);
+        return NULL;
+    }
     result->memory_locations = hashmap_create();
+    if (result->memory_locations == NULL) {
+        puts("parse(): hashmap_create failed (2)");
+        hashmap_destroy(result->labels);
+        free(result->code_instructions);
+        free(result->data_instructions);
+        free(result);
+        return NULL;
+    }
+
     result->data_count = 0;
     result->code_count = 0;
-    int data_capacite = MAX_DATA_COUNT, code_capacite = MAX_CODE_COUNT;
+    int data_capacity = DEFAULT_DATA_COUNT;
+    int code_capacity = DEFAULT_CODE_COUNT;
 
-    char line[MAX_LINE_LENGTH];
-    int in_data_section = 0, in_code_section = 0;
+    char line[MAX_LINE_LEN] = {0};
+    int in_data_section = 0;
+    int in_code_section = 0;
 
-    while (fgets(line, sizeof(line), file)) {
+    while (fgets(line, sizeof(line), file))
+    {
         // Supprimer le saut de ligne
-        size_t len = strlen(line);
+        int len = strlen(line);
         if (len > 0 && line[len - 1] == '\n') {
             line[len - 1] = '\0';
         }
 
-        // Vérifiez si la ligne est vide
+        // Vérifier si la ligne est vide
         if (strlen(line) == 0) {
             continue; // Ignore les lignes vides
         }
@@ -155,11 +200,16 @@ ParserResult* parse(const char* filename)
         }
 
         if (in_data_section) {
-            if (result->data_count >= data_capacite) {
-                data_capacite *= 2;
-                result->data_instructions = realloc(result->data_instructions, sizeof(Instruction*) * data_capacite);
+            if (result->data_count >= data_capacity) {
+                data_capacity *= 2;
+                result->data_instructions = realloc(result->data_instructions, sizeof(Instruction*) * data_capacity);
                 if (result->data_instructions == NULL) {
-                    puts("Erreur de réallocation de mémoire");
+                    puts("parse(): realloc failed");
+                    hashmap_destroy(result->memory_locations);
+                    hashmap_destroy(result->labels);
+                    free(result->code_instructions);
+                    free(result->data_instructions);
+                    free(result);
                     fclose(file);
                     return NULL;
                 }
@@ -168,14 +218,19 @@ ParserResult* parse(const char* filename)
             if (instruction != NULL) {
                 result->data_instructions[result->data_count++] = instruction;
             } else {
-                fprintf(stderr, "Erreur lors de l'analyse de la ligne : %s\n", line);
+                printf("parse(): could not parse '%s'\n", line);
             }
         } else if (in_code_section) {
-            if (result->code_count >= code_capacite) {
-                code_capacite *= 2;
-                result->code_instructions = realloc(result->code_instructions, sizeof(Instruction*) * code_capacite);
+            if (result->code_count >= code_capacity) {
+                code_capacity *= 2;
+                result->code_instructions = realloc(result->code_instructions, sizeof(Instruction*) * code_capacity);
                 if (result->code_instructions == NULL) {
-                    puts("Erreur de réallocation de mémoire");
+                    puts("parse(): realloc failed");
+                    hashmap_destroy(result->memory_locations);
+                    hashmap_destroy(result->labels);
+                    free(result->code_instructions);
+                    free(result->data_instructions);
+                    free(result);
                     fclose(file);
                     return NULL;
                 }
@@ -184,7 +239,7 @@ ParserResult* parse(const char* filename)
             if (instruction != NULL) {
                 result->code_instructions[result->code_count++] = instruction;
             } else {
-                fprintf(stderr, "Erreur lors de l'analyse de la ligne : %s\n", line);
+                printf("parse(): could not parse '%s'\n", line);
             }
         }
     }
@@ -251,7 +306,7 @@ char* trim(char* str)
 
 int search_and_replace(char** str, HashMap* values)
 {
-    if (!str || !*str || !values) return 0;
+    if ((str == NULL) || (*str == NULL) || (values == NULL)) return 0;
     int replaced = 0;
     char* input = *str;
     for (int i = 0; i < TABLE_SIZE; i++) {
@@ -267,7 +322,7 @@ int search_and_replace(char** str, HashMap* values)
 
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);
-                int remain_len = strlen(substr + key_len);
+                // int remain_len = strlen(substr + key_len);
 
                 char* new_str = (char*)malloc(strlen(input) - key_len + repl_len + 1);
                 strncpy(new_str, input, substr - input);
@@ -296,8 +351,8 @@ int search_and_replace(char** str, HashMap* values)
 
 int resolve_constants(ParserResult* result)
 {
-    if (!result) {
-        return 0;
+    if (result == NULL) {
+        return -1;
     }
 
     for (int i = 0; i < result->code_count; i++)
@@ -322,5 +377,5 @@ int resolve_constants(ParserResult* result)
         }
     }
 
-    return 1;
+    return 0;
 }

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-unsigned long simple_hash(const char *str)
+unsigned long simple_hash(const char* str)
 {
     unsigned long hash = 0;
     unsigned int i = strlen(str);
@@ -18,14 +18,14 @@ HashMap* hashmap_create()
 {
     HashMap* map = (HashMap*)malloc(sizeof(HashMap));
     if (map == NULL) {
-        perror("hashmap_create(): malloc failed");
+        puts("hashmap_create(): malloc failed");
         return NULL;
     }
 
     map->size = 0;
     map->table = (HashEntry*)malloc(sizeof(HashEntry) * TABLE_SIZE);
     if (map == NULL) {
-        perror("hashmap_create(): malloc failed");
+        puts("hashmap_create(): malloc failed (2)");
         free(map);
         return NULL;
     }
@@ -37,10 +37,10 @@ HashMap* hashmap_create()
     return map;
 }
 
-int hashmap_insert(HashMap *map, const char *key, void *value)
+int hashmap_insert(HashMap* map, const char* key, void* value)
 {
     if ((map == NULL) || (key == NULL) || (map->size >= TABLE_SIZE)) {
-        perror("hashmap_insert: invalid arguments");
+        puts("hashmap_insert: invalid arguments");
         return -1;
     }
 
@@ -58,14 +58,14 @@ int hashmap_insert(HashMap *map, const char *key, void *value)
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);
 
-    perror("hashmap_insert: hashmap is full");
+    puts("hashmap_insert: hashmap is full");
     return -2;
 }
 
-void* hashmap_get(HashMap *map, const char *key)
+void* hashmap_get(HashMap* map, const char* key)
 {
     if ((map == NULL) || (key == NULL)) {
-        perror("hashmap_get: invalid arguments");
+        puts("hashmap_get: invalid arguments");
         return NULL;
     }
 
@@ -81,17 +81,17 @@ void* hashmap_get(HashMap *map, const char *key)
         } else if (strcmp(map->table[hash].key, key) == 0) {
             return map->table[hash].value;
         } else {
-            // Impossible
+            printf("hashmap_get: unknown error searching for %s\n", key);
         }
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);
     return NULL;
 }
 
-int hashmap_remove(HashMap *map, const char *key)
+int hashmap_remove(HashMap* map, const char* key)
 {
     if (map == NULL || key == NULL) {
-        perror("hashmap_remove: invalid arguments");
+        puts("hashmap_remove: invalid arguments");
         return -1;
     }
 
@@ -111,7 +111,7 @@ int hashmap_remove(HashMap *map, const char *key)
             map->size--;
             return 0;
         } else {
-            // Impossible
+            puts("hashmap_remove: unknown error");
         }
         hash = (hash + (++idx)) % TABLE_SIZE;
     } while (hash != hash_depart);
@@ -119,10 +119,10 @@ int hashmap_remove(HashMap *map, const char *key)
     return -3;
 }
 
-void hashmap_destroy(HashMap *map)
+void hashmap_destroy(HashMap* map)
 {
     if (map == NULL) {
-        perror("hashmap_destroy: invalid arguments");
+        puts("hashmap_destroy: invalid arguments");
         return;
     }
 

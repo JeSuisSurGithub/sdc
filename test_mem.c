@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char* argv[])
+int main(void)
 {
     MemoryHandler* hmem = memory_init(1024);
 

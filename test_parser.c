@@ -6,20 +6,15 @@ int main(void)
 {
     ParserResult* result = parse("exemple.asm");
 
-    if (!result) {
-        printf("Erreur lors de l'analyse du fichier\n");
-        return 1;
-    }
-
-    printf("Instructions .data (%d) :\n", result->data_count);
+    printf("Instructions .DATA (%d) :\n", result->data_count);
     for (int i = 0; i < result->data_count; i++) {
-        printf("'%s '%s' '%s'\n",
+        printf("'%s' '%s' '%s'\n",
                result->data_instructions[i]->mnemonic,
                result->data_instructions[i]->operand1,
                result->data_instructions[i]->operand2);
     }
 
-    printf("Instructions .code (%d) :\n", result->code_count);
+    printf("Instructions .CODE (%d) :\n", result->code_count);
     for (int i = 0; i < result->code_count; i++) {
         printf("'%s' '%s' '%s'\n",
                result->code_instructions[i]->mnemonic,

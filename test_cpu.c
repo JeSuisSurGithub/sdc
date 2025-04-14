@@ -1,16 +1,12 @@
-#include "cpu.h"
 #include "parser.h"
+#include "cpu.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-
-int main() {
-    CPU *cpu = cpu_init(1024);
-    if (!cpu) {
-        fprintf(stderr, "Erreur d'initialisation du CPU\n");
-        return 1;
-    }
+int main(void)
+{
+    CPU* cpu = cpu_init(1024);
 
     printf("CPU initialisé avec succès !\n");
 
@@ -53,6 +49,6 @@ int main() {
     free_parser_result(res);
     printf("CPU détruit et mémoire libérée.\n");
 
-    return EXIT_SUCCESS;
+    return 0;
 }
 

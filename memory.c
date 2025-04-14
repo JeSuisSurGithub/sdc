@@ -14,7 +14,7 @@ MemoryHandler* memory_init(int size)
 
     handler->memory = (void**)malloc(sizeof(void*) * size);
     if (handler->memory == NULL) {
-        puts("memory_init(): malloc failed");
+        puts("memory_init(): malloc failed (2)");
         free(handler);
         return NULL;
     }
@@ -22,11 +22,12 @@ MemoryHandler* memory_init(int size)
     for (int i = 0; i < size; i++) {
     	handler->memory[i] = NULL;
     }
+
     handler->total_size = 0;
 
     handler->free_list = (Segment*)malloc(sizeof(Segment));
     if (handler->free_list == NULL) {
-        puts("memory_init(): malloc failed");
+        puts("memory_init(): malloc failed (3)");
         free(handler->memory);
         free(handler);
         return NULL;
@@ -114,7 +115,7 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
         {
             Segment* apres = (Segment*)malloc(sizeof(Segment));
             if (apres == NULL) {
-                puts("create_segment(): malloc failed");
+                puts("create_segment(): malloc failed (2)");
                 free(new_seg);
                 return -3;
             }
@@ -125,13 +126,14 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
             handler->free_list = apres;
         }
 
+        // Avant
         if ((new_seg->start - cible->start) > 0)
         {
             Segment* avant = (Segment*)malloc(sizeof(Segment));
             if (avant == NULL) {
-                puts("create_segment(): malloc failed");
+                puts("create_segment(): malloc failed (3)");
                 free(new_seg);
-                // Encore un free
+                // free après???
                 return -4;
             }
 
@@ -143,21 +145,22 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
 
         free(cible);
 
-        // Attributs
+        // Mise a jour des attributs
         handler->total_size += size;
         if (hashmap_insert(handler->allocated, name, new_seg) < 0) {
             puts("create_segment(): hashmap_insert failed");
             free(new_seg);
-            // Encore deux free
+            // free avant et après???
             return -5;
         }
 
         return 0;
     }
+    puts("create_segment(): no free segments left");
     return -1;
 }
 
-int remove_segment(MemoryHandler *handler, const char *name)
+int remove_segment(MemoryHandler* handler, const char* name)
 {
     if (handler == NULL) {
         return -1;
@@ -165,13 +168,13 @@ int remove_segment(MemoryHandler *handler, const char *name)
 
     Segment* cible = hashmap_get(handler->allocated, name);
 
-    if (!cible) {
-        puts("remove_segment: hashmap_get failed");
+    if (cible == NULL) {
+        puts("remove_segment(): hashmap_get failed");
         return -2;
     }
 
     if (hashmap_remove(handler->allocated, name) < 0) {
-        puts("remove_segment: hashmap_remove failed");
+        puts("remove_segment(): hashmap_remove failed");
         return -3;
     }
 
@@ -182,6 +185,7 @@ int remove_segment(MemoryHandler *handler, const char *name)
     Segment* prec_avant = NULL;
     Segment* prec_apres = NULL;
 
+    // Recherche des avant et après
     for (Segment *it = handler->free_list, *prec = NULL; it != NULL; prec = it, it = it->next) {
         if ((it->start + it->size) == cible->start) {
             avant = it;
@@ -193,9 +197,10 @@ int remove_segment(MemoryHandler *handler, const char *name)
         }
     }
 
+    // Nouveau segment restauré
     Segment* new_seg = (Segment*)malloc(sizeof(Segment));
     if (new_seg == NULL) {
-        puts("remove_segment: malloc failed");
+        puts("remove_segment(): malloc failed");
         return -4;
     }
     new_seg->start = cible->start;
@@ -203,6 +208,7 @@ int remove_segment(MemoryHandler *handler, const char *name)
 
     free(cible);
 
+    // On y ajoute les blocs adjacents
     if (avant != NULL) {
         if (prec_avant == NULL) {
             handler->free_list = avant->next;
