@@ -29,7 +29,7 @@ int main(void)
 
     cpu_destroy(cpu);
     free_parser_result(res);
-    printf("(Ici il y a message d'erreur car on n'a pas alloué CS)\n");
+    printf("(Ici il y a message d'avertissement car on n'a pas alloué CS)\n");
     printf("CPU détruit et mémoire libérée.\n");
 
     return 0;

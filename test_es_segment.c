@@ -52,7 +52,7 @@ int main() {
     printf("Segment ES libéré\n");
 
     cpu_destroy(cpu);
-    printf("(Ici il y a deux messages d'erreurs car on n'a pas alloué CS ni DS)\n");
+    printf("(Ici il y a deux messages d'avertissements car on n'a pas alloué CS ni DS)\n");
     return 0;
 }
 
