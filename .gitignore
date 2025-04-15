@@ -1,6 +1,7 @@
 /.vscode
 /*.o
-/*.pdf
+/Consignes-soumission.pdf
+/projet-complet.pdf
 /test_cpu
 /test_cpu2
 /test_cpu3
