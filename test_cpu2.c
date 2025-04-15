@@ -79,6 +79,7 @@ int main(void)
     printf("\tdsdx: %i\n", *dsdx);
 
     cpu_destroy(cpu);
+    printf("(Ici il y a message d'erreur car on n'a pas alloué CS)\n");
     return 0;
 }
 

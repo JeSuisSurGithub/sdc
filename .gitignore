@@ -9,4 +9,6 @@
 /test_parser
 /test_perf_parser
 /test_perf_cpu
+/test_es_segment
+/sdc_main
 /vgcore.*

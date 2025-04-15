@@ -34,7 +34,6 @@ int run_program(CPU* cpu)
     return 0;
 }
 
-
 int main(void)
 {
     time_t start = clock();

@@ -97,11 +97,14 @@ void cpu_destroy(CPU* cpu)
     free(hashmap_get(cpu->context, "SP"));
 
     Segment* DS = hashmap_get(cpu->memory_handler->allocated, "DS");
-	for (int i = 0; i < DS->size; i++)
-    {
-        void* var = load(cpu->memory_handler, "DS", i);
-        if (var != NULL) free(var);
-	}
+    if (DS != NULL) {
+
+        for (int i = 0; i < DS->size; i++)
+        {
+            void* var = load(cpu->memory_handler, "DS", i);
+            if (var != NULL) free(var);
+        }
+    }
     remove_segment(cpu->memory_handler, "SS");
     remove_segment(cpu->memory_handler, "CS");
     remove_segment(cpu->memory_handler, "DS");

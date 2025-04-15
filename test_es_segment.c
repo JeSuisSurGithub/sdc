@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cpu.h"
-#include "memory.h"
 #include "hash.h"
 #include "parser.h"
 
@@ -17,8 +16,8 @@ int main() {
     int* zf = hashmap_get(cpu->context, "ZF");
     int* es = hashmap_get(cpu->context, "ES");
 
-    *ax = 6;      
-    *bx = 0;  
+    *ax = 6;
+    *bx = 0;
 
     Instruction alloc_instr = { .mnemonic = "ALLOC", .operand1 = NULL, .operand2 = NULL };
     handle_instruction(cpu, &alloc_instr, NULL, NULL);
@@ -53,6 +52,7 @@ int main() {
     printf("Segment ES libéré\n");
 
     cpu_destroy(cpu);
+    printf("(Ici il y a deux messages d'erreurs car on n'a pas alloué CS ni DS)\n");
     return 0;
 }
 
