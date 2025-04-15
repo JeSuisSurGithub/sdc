@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 Instruction* parse_data_instruction(const char* line, HashMap* memory_locations)
 {
@@ -72,7 +73,8 @@ Instruction* parse_code_instruction(const char* line, HashMap* labels, int code_
     int i = 0;
 
     // Détecter s'il y a un label (strchr???)
-    while (line[i] != '\0' && line[i] != ':' && i < (MAX_LABEL_LEN - 1)) {
+    // isalnum sert a différencier si il s'agit d'un label ou non
+    while (line[i] != '\0' && isalnum(line[i]) && line[i] != ':' && i < (MAX_LABEL_LEN - 1)) {
         label[i] = line[i];
         i++;
     }

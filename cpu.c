@@ -58,8 +58,10 @@ CPU* cpu_init(int memory_size)
 
     int* sp = calloc(1, sizeof(int));
     int* bp = calloc(1, sizeof(int));
+    int* es = calloc(1, sizeof(int)); (*es) = -1;
     hashmap_insert(cpu->context, "SP", sp);
     hashmap_insert(cpu->context, "BP", bp);
+    hashmap_insert(cpu->context, "ES", es);
 
     if (create_segment(cpu->memory_handler, "SS", memory_size - STACK_SIZE, STACK_SIZE) < 0) {
         puts("cpu_init(): create_segment failed");
@@ -88,6 +90,9 @@ void cpu_destroy(CPU* cpu)
         free(value);
     }
 
+    // La fonction contient déja les mesures de protections nécéssaires pour savoir il y a besoin de désallouer
+    free_es_segment(cpu);
+    free(hashmap_get(cpu->context, "ES"));
     free(hashmap_get(cpu->context, "BP"));
     free(hashmap_get(cpu->context, "SP"));
 
@@ -212,6 +217,25 @@ void* immediate_addressing(CPU* cpu, const char* operand)
     return NULL;
 }
 
+void* segment_override_addressing(CPU* cpu, const char* operand)
+{
+    if (!matches("^\\[(D|C|S|E)S:(A|B|C|D)X\\]$", operand)) {
+        return NULL;
+    }
+
+    char segment[3] = {0};
+    char reg[3] = {0};
+    sscanf(operand, "[%2[^:]:%2[^]]]", segment, reg);
+
+    Segment* seg = (Segment*)hashmap_get(cpu->memory_handler->allocated, segment);
+    int* reg_val = (int*)hashmap_get(cpu->context, reg);
+    if (seg == NULL || reg_val == NULL) {
+        return NULL;
+    }
+
+    return load(cpu->memory_handler, segment, (*reg_val));
+}
+
 void* register_addressing(CPU* cpu, const char* operand)
 {
     if (matches("^(A|B|C|D)X$", operand)) {
@@ -248,8 +272,7 @@ void handle_MOV(CPU* cpu, void* src, void* dest)
     *(idest) = *(isrc);
 }
 
-void* resolve_addressing(CPU* cpu, const char* operand)
-{
+void* resolve_addressing(CPU* cpu, const char* operand) {
     void* imm = immediate_addressing(cpu, operand);
     if (imm != NULL) return imm;
 
@@ -261,6 +284,9 @@ void* resolve_addressing(CPU* cpu, const char* operand)
 
     void* indirect = register_indirect_addressing(cpu, operand);
     if (indirect != NULL) return indirect;
+
+    void* segment_override = segment_override_addressing(cpu, operand);
+    if (segment_override != NULL) return segment_override;
 
     puts("resolve_addressing(): operand doesn't match with any mode");
     return NULL;
@@ -282,6 +308,63 @@ void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_c
 
     int* ip = (int*)hashmap_get(cpu->context, "IP");
     *ip = 0;
+}
+
+int free_es_segment(CPU* cpu)
+{
+    int* es = (int*)hashmap_get(cpu->context, "ES");
+    if (es == NULL || *es == -1) return -1;
+
+    Segment* seg = (Segment*)hashmap_get(cpu->memory_handler->allocated, "ES");
+    if (seg == NULL) return -2;
+
+    for (int i = 0; i < seg->size; i++)
+    {
+        int index = seg->start + i;
+        if (cpu->memory_handler->memory[index]) {
+            free(cpu->memory_handler->memory[index]);
+            cpu->memory_handler->memory[index] = NULL;
+        }
+    }
+
+    if (remove_segment(cpu->memory_handler, "ES") < 0) return -3;
+
+    *es = -1;
+    return 0;
+}
+
+int alloc_es_segment(CPU* cpu)
+{
+    int* ax = (int*)hashmap_get(cpu->context, "AX");
+    int* bx = (int*)hashmap_get(cpu->context, "BX");
+    int* es = (int*)hashmap_get(cpu->context, "ES");
+    int* zf = (int*)hashmap_get(cpu->context, "ZF");
+
+    if (!ax || !bx || !es || !zf) return -1;
+
+    int size = *ax;
+    int strategy = *bx;
+
+    int start = find_free_address_strategy(cpu->memory_handler, size, strategy);
+    if (start < 0) {
+        *zf = 1;
+        return -1;
+    }
+
+    if (create_segment(cpu->memory_handler, "ES", start, size) < 0) {
+        *zf = 1;
+        return -1;
+    }
+
+    for (int i = 0; i < size; ++i) {
+        int* zero = malloc(sizeof(int));
+        *zero = 0;
+        store(cpu->memory_handler, "ES", i, zero);
+    }
+
+    *es = start;
+    *zf = 0;
+    return 0;
 }
 
 int handle_instruction(CPU* cpu, Instruction* instr, void* src, void* dest)
@@ -368,6 +451,12 @@ int handle_instruction(CPU* cpu, Instruction* instr, void* src, void* dest)
             *(int*)dest = value;
         }
     }
+    else if (strcmp(instr->mnemonic, "ALLOC") == 0) {
+   		return alloc_es_segment(cpu);
+	}
+    else if (strcmp(instr->mnemonic, "FREE") == 0) {
+    	return free_es_segment(cpu);
+	}
     else {
         puts("handle_instruction(): unrecognized instruction");
         return -10;
@@ -434,8 +523,18 @@ void print_registers(CPU* cpu)
 {
     if (cpu == NULL) return;
 
-    const char* reg_names[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP"};
-    for (int i = 0; i < 9; i++) {
+    const char* reg_names[] = {
+        "AX",
+        "BX",
+        "CX",
+        "DX",
+        "IP",
+        "ZF",
+        "SF",
+        "SP",
+        "BP",
+        "ES"};
+    for (int i = 0; i < (sizeof(reg_names)/sizeof(reg_names[0])); i++) {
         int* val = (int*)hashmap_get(cpu->context, reg_names[i]);
         if (val) {
             printf("%s: %d | ", reg_names[i], *val);

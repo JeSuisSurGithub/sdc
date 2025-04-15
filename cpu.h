@@ -36,4 +36,8 @@ void print_registers(CPU* cpu);
 int push_value(CPU* cpu, int value);
 int pop_value(CPU* cpu, int *dest);
 
+void* segment_override_addressing(CPU* cpu, const char* operand);
+int free_es_segment(CPU* cpu);
+int alloc_es_segment(CPU* cpu);
+
 #endif /* CPU_H */

@@ -239,3 +239,32 @@ int remove_segment(MemoryHandler* handler, const char* name)
 
     return 0;
 }
+
+int find_free_address_strategy(MemoryHandler* handler, int size, int strategy) {
+    Segment* best = NULL;
+    Segment* current = handler->free_list;
+
+    if (current == NULL) return -1;
+
+    while (current) {
+        if (current->size >= size) {
+            if (strategy == 0) return current->start; // First Fit
+
+            if (best == NULL) {
+                best = current;
+            } else {
+                int diff = current->size - size;
+                int best_diff = best->size - size;
+
+                if ((strategy == 1 && diff < best_diff) ||  // Best Fit
+                    (strategy == 2 && diff > best_diff))    // Worst Fit
+                {
+                    best = current;
+                }
+            }
+        }
+        current = current->next;
+    }
+
+    return (best != NULL) ? best->start : -1;
+}
