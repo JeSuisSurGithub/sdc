@@ -14,6 +14,7 @@
 ### Architecture
 
 | Registre | Description |
+|------------|------------|
 | AX | Registre général A |
 | BX | Registre général B |
 | CX | Registre général C |
@@ -26,12 +27,14 @@
 | ES | Segment supplémentaire (allocation dynamique) |
 
 | Segment | Usage |
+|------------|------------|
 | CS | Segment de code (instructions) |
 | DS | Segment de données (variables globales) |
 | SS | Segment de pile (pile locale) |
 | ES | Segment supplémentaire (tas / dynamique) |
 
 | Mnémonique | Description |
+|------------|------------|
 | MOV dst, src | Copie la valeur de src vers dst |
 | ADD dst, src | Ajoute src à dst |
 | CMP dst, src | Compare dst et src, met à jour ZF/SF |
