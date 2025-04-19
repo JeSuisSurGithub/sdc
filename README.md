@@ -47,7 +47,7 @@
 | ALLOC | Alloue un segment mémoire dans ES (taille = AX, stratégie* = BX) |
 | FREE | Libère le segment ES |
 
-+* Stratégie 0 opte pour le premier segment convenable, 1 pour celui avec la taille la plus proche et 2 la taille la plus grande
++ *Stratégie 0 opte pour le premier segment convenable, 1 pour celui avec la taille la plus proche et 2 la taille la plus grande
 
 ### Modes d'adressage
 
