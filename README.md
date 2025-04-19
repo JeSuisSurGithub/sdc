@@ -9,6 +9,24 @@
 + La taille mémoire doit-etre suffisante pour accomoder les variables et instructions du programme.
 * Une instruction vaut une case, une variable simple vaut une aussi et pour tableau il s'agit de la taille du tableau
 
+## Description
++ Makefile: Comporte les différentes cibles pour les tests et le programme final
+* cpu.c/cpu.h: Contient les fonctions relatives au CPU
++ exemple.asm: Le fichier ASM pour tester toute les instructions
+* hash.c/hash.h: Implémentation de table de hachage générique
++ main.c: Interface utilisateur (voir guide ci-dessous)
+* memory.c/memory.h: Fonctions relatives à la gestion des segments de mémoire
++ parser.cparser.h: Analyse et traitement des fichiers ASM
+* perf_boucle.asm: Fichier test ASM pour la vitesse du CPU
++ perf_compile.asm: Fichier test ASM pour la vitesse du parser
+* test_cpu.c/test_cpu2.c/test_cpu3.c: Test progressif des différentes fonctionalités du CPU
++ test_es_segment.c: Test de la fonctionalité du extra segment
+* test_hash.c: Test de la table de hachage
++ test_mem.c: Test du gestionnaire de segments
+* test_parser.c: Test du parser
++ test_perf_cpu.c: Test de la performance du CPU
+* test_perf_parser.c: Test de la performance du parser
+
 ## Guide d'usage
 
 ### Architecture
